@@ -1,0 +1,63 @@
+# BoVerse
+
+Atomic workflows. Five primitives. Infinite forms. The workflow factory for SMBs.
+
+## What lives here
+
+| Path                                          | What it is                                                                                  |
+|-----------------------------------------------|---------------------------------------------------------------------------------------------|
+| `landing/`                                    | Marketing site (Next.js 16, React 19, Tailwind 4, TypeScript). Live at boverse.ai (planned).|
+| `Context/BoVerse_Workflow_Factory_Design.md`  | Source-of-truth design doc, rev 6. APPROVED.                                                |
+| `Context/BoVerse_Workflow_Factory_TODOS.md`   | Workflow Factory backend TODOs (P0-P3 + v1.1 + v2 + infra).                                 |
+| `Context/BoVerse_Workflow_Factory_v1.docx`    | v1.0 spec (locked).                                                                         |
+| `Context/BoVerse_Workflow_Factory_Narrative.docx` | Vision narrative.                                                                       |
+| `Context/BoVerse_Example_Workflow_Apex_Electrical (1).docx` | Apex Electrical worked example (22-step workflow).                              |
+
+The Python Workflow Factory backend is planned but not yet built — see design doc rev 6 for the 17-week build plan starting Sep 2026.
+
+## Quick start (landing site)
+
+```bash
+cd landing
+npm install
+npm run dev
+```
+
+Then open http://localhost:3000.
+
+## Architecture
+
+The Workflow Factory backend (planned, not built):
+
+```
+boverse-ingestion-mcp    boverse-state-mcp    boverse-servicetitan-mcp
+        |                       |                       |
+        |                       v                       |
+        +-------->  Postgres + pgvector  <--------------+
+                            |
+                            v
+              Claude Agent SDK orchestration
+                  (5 subagent stages)
+                            |
+                            v
+                  Generated workflow artifact
+              (Python repo, Docker, OTel, docs)
+```
+
+See `Context/BoVerse_Workflow_Factory_Design.md` for the complete architectural design.
+
+## Brand
+
+- **5 primitives**: ingest, transform, validate, action, feedback
+- **Persona**: $5M-$30M SMB segment (no IT department, ~12-50 staff)
+- **Worked example**: Apex Electrical, 12 estimators, $8-12M revenue, 22-step quote-intake workflow
+
+## Status
+
+- Marketing site: built, ready for review
+- Workflow Factory backend: APPROVED design doc rev 6, build begins Sep 2026
+- Independent study: Sep 2026 → Apr 2027 (320-480 hrs)
+
+## License
+
+Proprietary. © 2026 BoVerse.
