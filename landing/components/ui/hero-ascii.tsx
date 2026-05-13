@@ -200,8 +200,8 @@ export default function Home() {
             <span className="hidden lg:inline">SYSTEM.ACTIVE</span>
             <span className="lg:hidden">SYS.ACT</span>
             <div className="hidden lg:flex gap-1">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="w-1 h-3 bg-white/30" style={{ height: `${Math.random() * 12 + 4}px` }}></div>
+              {[7, 11, 5, 14, 9, 6, 12, 8].map((h, i) => (
+                <div key={i} className="w-1 h-3 bg-white/30" style={{ height: `${h}px` }}></div>
               ))}
             </div>
             <span>V1.0.0</span>
