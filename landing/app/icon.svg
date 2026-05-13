@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" fill="#000000"/>
+  <g transform="skewX(-12) translate(2.5, 0)">
+    <text x="16" y="24" text-anchor="middle" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-weight="700" font-style="italic" font-size="22" fill="#ffffff">B</text>
+  </g>
+  <rect x="0" y="30" width="32" height="2" fill="#ffffff" opacity="0.2"/>
+</svg>

@@ -18,17 +18,13 @@ Items here are deferred work, not blocking. Prune as you go.
 - **Effort:** Human ~3-4 hours / CC ~45 min (Route Handler + email service integration + env vars for credentials).
 - **Context:** The form state machine already handles loading and error states. Just need the real fetch call replacing the setTimeout. Network error UI is triggerable via `?error=1` for design preview.
 
-### 3. Replace default favicon
-- **What:** `app/favicon.ico` is still the default Next.js favicon.
-- **Why:** Visible in every browser tab. Communicates "this is a default Next.js site" instead of BoVerse identity.
-- **Effort:** Human ~30 min (design a favicon, export to ICO + PNG sizes) / CC ~5 min (if BoVerse already has a mark).
-- **Context:** Should be the same BOVERSE italic-skewed mono mark from the SiteHeader brand cluster.
+### 3. ~~Replace default favicon~~ ✅ DONE 2026-05-13
+- **What:** ~~`app/favicon.ico` is still the default Next.js favicon.~~
+- **Resolution:** Replaced with `app/icon.svg` — bold italic skewed "B" mark on black with subtle bottom rule, matches the BOVERSE brand cluster aesthetic. Default favicon.ico removed.
 
-### 4. Create OG image for social sharing
-- **What:** `app/layout.tsx` metadata references `openGraph` and `twitter` cards but no actual image asset is referenced. Without an `images` field, sharing the URL on Twitter/LinkedIn/Slack shows a blank card.
-- **Why:** Social sharing is brand-critical. Every BoVerse mention on Twitter/LinkedIn will display without a preview image.
-- **Effort:** Human ~1 hour / CC ~15 min (use `next/og` for dynamic OG generation, or static PNG export).
-- **Context:** Should match hero aesthetic: BOVERSE brand mark, "ATOMIC WORKFLOWS" headline, technical chrome. 1200x630 PNG.
+### 4. ~~Create OG image for social sharing~~ ✅ DONE 2026-05-13
+- **What:** ~~`app/layout.tsx` metadata references `openGraph` and `twitter` cards but no actual image asset is referenced.~~
+- **Resolution:** Built `app/opengraph-image.tsx` using `next/og` ImageResponse — dynamic 1200x630 PNG with full BoVerse brand chrome (SYSTEM.ACTIVE row, BOVERSE skewed mark + EST. 2026, 001 section marker with rule, ATOMIC WORKFLOWS headline, tagline, ∞ · PRIMITIVES + boverse.ai footer). `app/twitter-image.tsx` re-uses the same composition. Both render at edge runtime.
 
 ### 5. Build /privacy and /terms pages
 - **What:** Marketing site has no privacy policy or terms of service pages. Footer doesn't link to them.
