@@ -17,20 +17,35 @@ The Python Workflow Factory backend is planned but not yet built — see design 
 
 ## Quick start (landing site)
 
+**Prerequisites:** [Node.js 20+](https://nodejs.org/) and [git](https://git-scm.com/) installed.
+
+Open a fresh terminal (Windows PowerShell, macOS Terminal, or Linux shell) in any directory and copy-paste:
+
 ```bash
-cd landing
+git clone https://github.com/mjeb3432/BoVerse.git
+cd BoVerse/landing
 npm install
 npm run dev
 ```
 
 The dev server starts on http://localhost:3000 and your default browser opens to it automatically. If port 3000 is busy, Next.js picks the next free port and the browser opens there instead.
 
+**Already cloned the repo?** Skip the `git clone` line and just `cd` to wherever you cloned it, then into `landing/`:
+
+```bash
+cd path/to/BoVerse/landing
+npm install
+npm run dev
+```
+
 **Production build:**
 
 ```bash
-npm run build      # compile (Turbopack, ~5s)
-npm run start      # serve the compiled build on http://localhost:3000
+npm run build
+npm run start
 ```
+
+`npm run build` compiles via Turbopack in a few seconds. `npm run start` serves the compiled build on http://localhost:3000 (open it manually — production mode doesn't auto-open).
 
 **Other scripts:**
 
