@@ -23,7 +23,19 @@ npm install
 npm run dev
 ```
 
-Then open http://localhost:3000.
+The dev server starts on http://localhost:3000 and your default browser opens to it automatically. If port 3000 is busy, Next.js picks the next free port and the browser opens there instead.
+
+**Production build:**
+
+```bash
+npm run build      # compile (Turbopack, ~5s)
+npm run start      # serve the compiled build on http://localhost:3000
+```
+
+**Other scripts:**
+
+- `npm run dev:plain` — runs `next dev` without the auto-open wrapper
+- `npm run lint` — ESLint check
 
 ## Architecture
 
