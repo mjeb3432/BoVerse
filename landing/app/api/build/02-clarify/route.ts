@@ -126,6 +126,7 @@ function mockClarifyOutput(): ClarifyOutput {
           'When a scope item is ambiguous (e.g. "rewire the kitchen" without panel info), do you assume a default scope or flag for clarification?',
         why_this_matters:
           'Determines whether ambiguous inputs short-circuit to a human gate or proceed with a documented assumption.',
+        suggested_answer: null,
       },
       {
         id: 'q4',
@@ -134,6 +135,7 @@ function mockClarifyOutput(): ClarifyOutput {
           'Are there client categories that get non-standard labour rates (e.g. property management contracts, government work)?',
         why_this_matters:
           'Without this we cannot build a complete rate-lookup primitive. Edge cases will silently mis-price.',
+        suggested_answer: null,
       },
       {
         id: 'q5',
@@ -142,6 +144,7 @@ function mockClarifyOutput(): ClarifyOutput {
           'Is there a specific template or branding requirement for the quote PDF, or any required line items (e.g. payment terms, validity period)?',
         why_this_matters:
           'Drives the action primitive output format. Wrong format = manual rework on every quote.',
+        suggested_answer: null,
       },
     ],
   };

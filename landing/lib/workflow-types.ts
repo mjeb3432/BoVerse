@@ -33,12 +33,17 @@ export type IngestOutput = z.infer<typeof IngestOutputSchema>;
 // Stage 02 — CLARIFY
 // ────────────────────────────────────────────────────────────────────────────
 
+// NOTE: optional fields on LLM-output schemas use `.nullable()` (not
+// `.optional()`) because Groq's `openai/gpt-oss-120b` enforces OpenAI-strict
+// json_schema, which requires EVERY property to appear in `required`. The
+// model emits `null` when a field doesn't apply; consumers must treat
+// null and undefined the same way. Gemini is happy with either form.
 export const ClarifyQuestionSchema = z.object({
   id: z.string(),
   gap: z.string(),
   question: z.string(),
   why_this_matters: z.string(),
-  suggested_answer: z.string().optional(),
+  suggested_answer: z.string().nullable(),
 });
 
 export const ClarifyOutputSchema = z.object({
@@ -60,13 +65,16 @@ export const SchemaFieldSchema = z.object({
   type: z.enum(['string', 'number', 'boolean', 'date', 'enum', 'object']),
   description: z.string(),
   required: z.boolean(),
-  enum_values: z.array(z.string()).optional(),
+  // Nullable (see note on ClarifyQuestionSchema).
+  enum_values: z.array(z.string()).nullable(),
 });
 
 export const SyntheticRowSchema = z.object({
   row_id: z.string(),
   kind: z.enum(['happy', 'edge']),
-  edge_case_description: z.string().optional(),
+  // Nullable (see note on ClarifyQuestionSchema). Happy rows emit null here;
+  // edge rows describe the failure mode being tested.
+  edge_case_description: z.string().nullable(),
   data: z.record(z.string(), z.unknown()),
 });
 
@@ -85,11 +93,18 @@ export const WorkflowStepSchema = z.object({
   name: z.string(),
   primitive: z.enum(['ingest', 'transform', 'validate', 'action', 'feedback']),
   actor: z.enum(['auto', 'human', 'hybrid']),
-  model: z.enum(['gemini-2.0-flash', 'gemini-1.5-pro', 'groq-llama-3.3-70b', 'deterministic']),
-  prompt: z.string().optional(),
+  // Model labels are advisory — the engine maps everything to fastModel().
+  // Updated the enum to reflect the current provider chain so the LLM picks
+  // realistic names rather than hallucinating obsolete model IDs.
+  model: z.enum(['groq-gpt-oss-120b', 'gemini-2.5-flash', 'deterministic']),
+  // Nullable (see note on ClarifyQuestionSchema). Deterministic steps emit
+  // null here because they don't need a prompt template.
+  prompt: z.string().nullable(),
   inputs: z.array(z.string()),
   outputs: z.array(z.string()),
-  rag_assets: z.array(z.string()).optional(),
+  // Nullable (see note on ClarifyQuestionSchema). Steps with no RAG needs
+  // emit null or an empty array.
+  rag_assets: z.array(z.string()).nullable(),
   rationale: z.string(),
 });
 

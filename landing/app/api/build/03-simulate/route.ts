@@ -89,12 +89,12 @@ async function saveStageOutput(
 function mockSimulateOutput(): SimulateOutput {
   return {
     schema: [
-      { name: 'inquiry_id', type: 'string', description: 'Unique inquiry identifier', required: true },
-      { name: 'client_name', type: 'string', description: 'Prospect or repeat client', required: true },
-      { name: 'is_repeat_client', type: 'boolean', description: 'Triggers loyalty discount', required: true },
+      { name: 'inquiry_id', type: 'string', description: 'Unique inquiry identifier', required: true, enum_values: null },
+      { name: 'client_name', type: 'string', description: 'Prospect or repeat client', required: true, enum_values: null },
+      { name: 'is_repeat_client', type: 'boolean', description: 'Triggers loyalty discount', required: true, enum_values: null },
       { name: 'building_type', type: 'enum', description: 'Drives heritage multiplier', required: true, enum_values: ['residential', 'commercial', 'heritage'] },
-      { name: 'scope_description', type: 'string', description: 'Free-text scope from inquiry', required: true },
-      { name: 'estimated_value', type: 'number', description: 'Initial value estimate', required: false },
+      { name: 'scope_description', type: 'string', description: 'Free-text scope from inquiry', required: true, enum_values: null },
+      { name: 'estimated_value', type: 'number', description: 'Initial value estimate', required: false, enum_values: null },
     ],
     rows: Array.from({ length: 10 }).map((_, i) => {
       const isEdge = i < 3;
@@ -107,7 +107,7 @@ function mockSimulateOutput(): SimulateOutput {
               'Ambiguous scope ("rewire the kitchen") should trigger human gate',
               'Job value $22K crosses senior estimator threshold',
             ][i]
-          : undefined,
+          : null,
         data: {
           inquiry_id: `INQ-2026-${String(1000 + i).padStart(4, '0')}`,
           client_name: ['Acme Corp', 'Bluebird Realty', 'Crystal Inn', 'Delta Construction', 'Evergreen Mgmt', 'Foundry Plaza', 'Garden Hotel', 'Heritage Square', 'Indigo Tower', 'Junction Mall'][i],

@@ -126,6 +126,10 @@ async function saveStageOutput(
 }
 
 function mockGenerateOutput(): GenerateOutput {
+  // All steps must include `prompt` and `rag_assets` keys (both nullable) to
+  // satisfy WorkflowStepSchema after the .optional()→.nullable() conversion.
+  // Models limited to the current enum: groq-gpt-oss-120b | gemini-2.5-flash
+  // | deterministic.
   return {
     workflow_name: 'Apex Electrical · Inbound Quote Workflow v1',
     workflow_description:
@@ -133,84 +137,93 @@ function mockGenerateOutput(): GenerateOutput {
     steps: [
       {
         id: '1.1', name: 'Inquiry capture', primitive: 'ingest', actor: 'auto', model: 'deterministic',
+        prompt: null, rag_assets: null,
         inputs: ['raw_inquiry'], outputs: ['inquiry_id', 'received_at', 'channel'],
         rationale: 'Normalize whatever channel the inquiry arrived through into a single shape.',
       },
       {
         id: '1.2', name: 'Client history lookup', primitive: 'transform', actor: 'auto', model: 'deterministic',
+        prompt: null, rag_assets: ['ServiceTitan client history'],
         inputs: ['client_name'], outputs: ['is_repeat_client', 'prior_quote_count', 'historical_win_rate'],
-        rag_assets: ['ServiceTitan client history'],
         rationale: 'Determines whether loyalty discount applies and provides context for pricing strategy.',
       },
       {
-        id: '2.1', name: 'Scope extraction', primitive: 'transform', actor: 'auto', model: 'gemini-2.0-flash',
+        id: '2.1', name: 'Scope extraction', primitive: 'transform', actor: 'auto', model: 'groq-gpt-oss-120b',
         prompt: 'Extract the work scope items from this inquiry:\n\n{{scope_description}}\n\nReturn a list of {item, quantity, ambiguity_score}.',
+        rag_assets: null,
         inputs: ['scope_description'], outputs: ['scope_items', 'ambiguity_flags'],
         rationale: 'Free-text scope must be decomposed into pricable line items.',
       },
       {
-        id: '2.2', name: 'Ambiguity gate', primitive: 'validate', actor: 'hybrid', model: 'gemini-2.0-flash',
+        id: '2.2', name: 'Ambiguity gate', primitive: 'validate', actor: 'hybrid', model: 'groq-gpt-oss-120b',
         prompt: 'For each scope item with ambiguity_score > 0.6, decide: clarify, assume_default, or escalate.',
+        rag_assets: null,
         inputs: ['scope_items', 'ambiguity_flags'], outputs: ['ambiguity_resolutions', 'requires_human'],
         rationale: 'Ambiguous scope must be resolved before pricing; routes to human if unsure.',
       },
       {
         id: '3.1', name: 'Labour hour calculation', primitive: 'transform', actor: 'auto', model: 'deterministic',
+        prompt: null, rag_assets: ['Labour hour estimation lookup table'],
         inputs: ['scope_items'], outputs: ['labour_hours_by_trade'],
-        rag_assets: ['Labour hour estimation lookup table'],
         rationale: 'Maps scope items → trade-hours via lookup table.',
       },
       {
         id: '3.2', name: 'Materials costing', primitive: 'transform', actor: 'auto', model: 'deterministic',
+        prompt: null, rag_assets: ['Home Depot pro pricing'],
         inputs: ['scope_items'], outputs: ['materials_cost'],
-        rag_assets: ['Home Depot pro pricing'],
         rationale: 'Materials line items costed at current pro pricing.',
       },
       {
         id: '3.3', name: 'Apply labour rate', primitive: 'transform', actor: 'auto', model: 'deterministic',
+        prompt: null, rag_assets: ['Labour rate card (with client category exceptions)'],
         inputs: ['labour_hours_by_trade', 'client_category'], outputs: ['labour_cost_pre_multiplier'],
-        rag_assets: ['Labour rate card (with client category exceptions)'],
         rationale: 'Trade-hours × hourly rate, with property-mgmt and government exceptions.',
       },
       {
         id: '3.4', name: 'Apply heritage multiplier', primitive: 'transform', actor: 'auto', model: 'deterministic',
+        prompt: null, rag_assets: null,
         inputs: ['labour_cost_pre_multiplier', 'building_type'], outputs: ['labour_cost_post_multiplier'],
         rationale: 'Heritage buildings = 1.4x. Applied BEFORE loyalty discount per clarification answer.',
       },
       {
         id: '3.5', name: 'Apply loyalty discount', primitive: 'transform', actor: 'auto', model: 'deterministic',
+        prompt: null, rag_assets: null,
         inputs: ['labour_cost_post_multiplier', 'materials_cost', 'is_repeat_client'], outputs: ['subtotal'],
         rationale: 'Repeat clients = 5% off the post-multiplier subtotal.',
       },
       {
         id: '3.6', name: 'Add margin + overhead', primitive: 'transform', actor: 'auto', model: 'deterministic',
+        prompt: null, rag_assets: ['Margin policy by job type'],
         inputs: ['subtotal'], outputs: ['quote_total'],
-        rag_assets: ['Margin policy by job type'],
         rationale: 'Standard margin + overhead applied per job type.',
       },
       {
         id: '4.1', name: 'Threshold check', primitive: 'validate', actor: 'auto', model: 'deterministic',
+        prompt: null, rag_assets: null,
         inputs: ['quote_total', 'building_type'], outputs: ['requires_senior_review'],
         rationale: '$20K residential / $50K commercial trigger senior estimator review.',
       },
       {
         id: '4.2', name: 'Senior estimator review', primitive: 'validate', actor: 'human', model: 'deterministic',
+        prompt: null, rag_assets: null,
         inputs: ['quote_total', 'scope_items', 'ambiguity_resolutions'], outputs: ['senior_approved', 'senior_notes'],
         rationale: 'Human gate for large or ambiguous quotes. Returns approval + any markup adjustments.',
       },
       {
         id: '5.1', name: 'Quote PDF generation', primitive: 'action', actor: 'auto', model: 'deterministic',
+        prompt: null, rag_assets: ['Quote PDF template'],
         inputs: ['quote_total', 'scope_items', 'client_name', 'senior_notes'], outputs: ['quote_pdf_path'],
-        rag_assets: ['Quote PDF template'],
         rationale: 'Render branded PDF with payment terms + 30-day validity.',
       },
       {
         id: '5.2', name: 'Send quote email', primitive: 'action', actor: 'auto', model: 'deterministic',
+        prompt: null, rag_assets: null,
         inputs: ['quote_pdf_path', 'client_email'], outputs: ['email_sent_at'],
         rationale: 'Deliver the PDF to the prospect within the 48-hour SLA.',
       },
       {
         id: '6.1', name: 'Track quote outcome', primitive: 'feedback', actor: 'auto', model: 'deterministic',
+        prompt: null, rag_assets: null,
         inputs: ['inquiry_id'], outputs: ['outcome', 'won_at_or_lost_at'],
         rationale: 'Win/loss tracking feeds the historical_win_rate signal for future pricing.',
       },
