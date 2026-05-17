@@ -13,7 +13,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY main.py .
 
 EXPOSE 8080
+ENV PORT=8080
 
 # Single uvicorn process. Stage 5 calls this once per generation — no need
 # for multi-worker until volume increases.
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
+# Honor $PORT env var so this works on Render / Fly.io / anywhere.
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8080}"]

@@ -1,0 +1,64 @@
+# Render Blueprint for BoVerse. One file = both services.
+#
+# To deploy:
+#   1. Sign up at https://render.com (free, no credit card needed)
+#   2. Connect this GitHub repo (mjeb3432/BoVerse)
+#   3. New + → Blueprint → select this repo
+#   4. Render reads this file and creates both services
+#   5. Set the env vars marked `sync: false` in the Render dashboard:
+#        - GOOGLE_GENERATIVE_AI_API_KEY  (boverse-landing)
+#        - DATABASE_URL                  (boverse-landing)
+#        - DOCX_SERVICE_URL              (boverse-landing — set to the
+#                                         boverse-docx service URL after
+#                                         first deploy)
+#
+# Free tier notes:
+#   - Both services use the free plan (512MB RAM, 0.1 CPU)
+#   - Services sleep after 15 min idle; first request after sleep takes
+#     ~30s to wake. Acceptable for a prototype.
+#   - 750 instance-hours/month free, enough for two services with sleep.
+
+services:
+  # ── Next.js landing + /build app ──────────────────────────────────────
+  - type: web
+    name: boverse-landing
+    runtime: docker
+    repo: https://github.com/mjeb3432/BoVerse
+    branch: main
+    rootDir: landing
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: oregon
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      # Set in Render dashboard (Settings → Environment → Add Secret File / Var)
+      - key: GOOGLE_GENERATIVE_AI_API_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: DOCX_SERVICE_URL
+        sync: false
+      # Optional: set to "false" if your Postgres doesn't support SSL
+      - key: PGSSL
+        sync: false
+
+  # ── python-docx sidecar ───────────────────────────────────────────────
+  - type: web
+    name: boverse-docx
+    runtime: docker
+    repo: https://github.com/mjeb3432/BoVerse
+    branch: main
+    rootDir: docx-service
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: oregon
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: 8080
