@@ -62,20 +62,27 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'invalid stage inputs' }, { status: 400 });
   }
 
-  const { object } = await generateObject({
-    model: reasoningModel(),
-    schema: GenerateOutputSchema,
-    messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
-      {
-        role: 'user',
-        content: `## Inferred process\n\n\`\`\`json\n${JSON.stringify(ingest.data, null, 2)}\n\`\`\`\n\n## Clarification answers\n\n\`\`\`json\n${JSON.stringify(answers.data, null, 2)}\n\`\`\`\n\n## Schema + synthetic data\n\n\`\`\`json\n${JSON.stringify(simulate.data, null, 2)}\n\`\`\`\n\nGenerate the full workflow definition.`,
-      },
-    ],
-  });
+  try {
+    const { object } = await generateObject({
+      model: reasoningModel(),
+      schema: GenerateOutputSchema,
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        {
+          role: 'user',
+          content: `## Inferred process\n\n\`\`\`json\n${JSON.stringify(ingest.data, null, 2)}\n\`\`\`\n\n## Clarification answers\n\n\`\`\`json\n${JSON.stringify(answers.data, null, 2)}\n\`\`\`\n\n## Schema + synthetic data\n\n\`\`\`json\n${JSON.stringify(simulate.data, null, 2)}\n\`\`\`\n\nGenerate the full workflow definition.`,
+        },
+      ],
+    });
 
-  await saveStageOutput(sessionId, 'generate_output', object, 'deliver');
-  return NextResponse.json({ output: object });
+    await saveStageOutput(sessionId, 'generate_output', object, 'deliver');
+    return NextResponse.json({ output: object });
+  } catch (err) {
+    return NextResponse.json(
+      { error: 'llm_error', message: (err as Error).message },
+      { status: 500 }
+    );
+  }
 }
 
 async function saveStageOutput(

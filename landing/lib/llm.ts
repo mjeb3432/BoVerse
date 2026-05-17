@@ -14,17 +14,19 @@ import { groq } from '@ai-sdk/groq';
 export const HAS_GOOGLE_KEY = Boolean(process.env.GOOGLE_GENERATIVE_AI_API_KEY);
 export const HAS_GROQ_KEY = Boolean(process.env.GROQ_API_KEY);
 
-// Primary models.
+// Primary model: gemini-2.5-flash.
 //
-// gemini-2.5-flash: reliable free tier (15 req/min, 1M tokens/day),
-//   multimodal (PDFs / images / audio inline), structured JSON output.
+// Reliable free tier (15 req/min, 1M tokens/day), multimodal (PDFs / images /
+// audio inline), structured JSON output. Verified working on the user's key
+// in production (Stages 01-03 all succeeded).
 //
-// gemini-2.5-pro: stronger reasoning. Free tier is tight (2 req/min,
-//   50K tokens/day), but Stage 04 only fires once per generation so it fits.
-//   If this also returns "limit: 0" on your key, fall back to
-//   gemini-2.5-flash by changing this single line.
+// Why ALSO use 2.5-flash for "reasoning"? 2.5-pro has tight free limits
+// (2 req/min, 50K tokens/day) AND can return the same "limit: 0" error as
+// 2.0-flash on brand-new keys without billing enabled. Stage 04's workflow
+// generation works fine on 2.5-flash — the 22-step Apex output we saw in
+// Stage 01 inference proves it can reason at that level.
 export const fastModel = () => google('gemini-2.5-flash');
-export const reasoningModel = () => google('gemini-2.5-pro');
+export const reasoningModel = () => google('gemini-2.5-flash');
 
 // Groq Llama 3.3 70B — text-only but very fast (~250 tok/s). Useful when
 // a per-row execution loop needs to fan out lots of small LLM calls quickly,

@@ -15,7 +15,11 @@ import {
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-export const maxDuration = 30;
+// 60s is the Hobby-tier Vercel ceiling. Stage 03's prompt is large (full
+// stage 01 output + 5 questions + 5 answers) and asks Gemini to emit a
+// 10-row dataset that conforms to a strict Zod schema — slowest stage in
+// the pipeline.
+export const maxDuration = 60;
 
 const SYSTEM_PROMPT = `You are a senior workflow architect at BoVerse. Given an inferred business process and the user's clarification answers, you produce:
 
@@ -43,20 +47,29 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'invalid stage inputs' }, { status: 400 });
   }
 
-  const { object } = await generateObject({
-    model: fastModel(),
-    schema: SimulateOutputSchema,
-    messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
-      {
-        role: 'user',
-        content: `## Inferred process\n\n\`\`\`json\n${JSON.stringify(ingest.data, null, 2)}\n\`\`\`\n\n## Clarification\n\nQuestions:\n\`\`\`json\n${JSON.stringify(clarify.data, null, 2)}\n\`\`\`\n\nAnswers:\n\`\`\`json\n${JSON.stringify(answers.data, null, 2)}\n\`\`\`\n\nProduce the input schema and 10 synthetic rows (7 happy + 3 edge cases).`,
-      },
-    ],
-  });
+  try {
+    const { object } = await generateObject({
+      model: fastModel(),
+      schema: SimulateOutputSchema,
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        {
+          role: 'user',
+          content: `## Inferred process\n\n\`\`\`json\n${JSON.stringify(ingest.data, null, 2)}\n\`\`\`\n\n## Clarification\n\nQuestions:\n\`\`\`json\n${JSON.stringify(clarify.data, null, 2)}\n\`\`\`\n\nAnswers:\n\`\`\`json\n${JSON.stringify(answers.data, null, 2)}\n\`\`\`\n\nProduce the input schema and 10 synthetic rows (7 happy + 3 edge cases).`,
+        },
+      ],
+    });
 
-  await saveStageOutput(sessionId, 'simulate_output', object, 'generate');
-  return NextResponse.json({ output: object });
+    await saveStageOutput(sessionId, 'simulate_output', object, 'generate');
+    return NextResponse.json({ output: object });
+  } catch (err) {
+    // Always return JSON — the client uses .json() and will crash on HTML
+    // error pages (e.g. Vercel function timeout returns an HTML response).
+    return NextResponse.json(
+      { error: 'llm_error', message: (err as Error).message },
+      { status: 500 }
+    );
+  }
 }
 
 async function saveStageOutput(

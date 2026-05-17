@@ -14,7 +14,7 @@ import {
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 const SYSTEM_PROMPT = `You are a senior workflow architect at BoVerse. You just inferred a business process from a customer's artifacts. Now you need to ask up to 5 TARGETED questions to fill the most important gaps.
 
@@ -45,20 +45,27 @@ export async function POST(req: Request) {
     );
   }
 
-  const { object } = await generateObject({
-    model: fastModel(),
-    schema: ClarifyOutputSchema,
-    messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
-      {
-        role: 'user',
-        content: `Inferred process so far:\n\n\`\`\`json\n${JSON.stringify(ingestOutput.data, null, 2)}\n\`\`\`\n\nGenerate up to 5 targeted clarification questions.`,
-      },
-    ],
-  });
+  try {
+    const { object } = await generateObject({
+      model: fastModel(),
+      schema: ClarifyOutputSchema,
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        {
+          role: 'user',
+          content: `Inferred process so far:\n\n\`\`\`json\n${JSON.stringify(ingestOutput.data, null, 2)}\n\`\`\`\n\nGenerate up to 5 targeted clarification questions.`,
+        },
+      ],
+    });
 
-  await saveStageOutput(sessionId, 'clarify_output', object, 'clarify');
-  return NextResponse.json({ output: object });
+    await saveStageOutput(sessionId, 'clarify_output', object, 'clarify');
+    return NextResponse.json({ output: object });
+  } catch (err) {
+    return NextResponse.json(
+      { error: 'llm_error', message: (err as Error).message },
+      { status: 500 }
+    );
+  }
 }
 
 async function saveStageOutput(
