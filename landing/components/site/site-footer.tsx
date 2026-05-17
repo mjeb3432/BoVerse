@@ -48,7 +48,7 @@ export default function SiteFooter() {
             <ul className="space-y-1.5 lg:space-y-2 text-[11px] lg:text-xs font-mono">
               <li><Link href="/process" className="text-white/70 hover:text-white focus-visible:text-white focus-visible:outline-none focus-visible:underline underline-offset-4 transition-colors">Process</Link></li>
               <li><Link href="/example" className="text-white/70 hover:text-white focus-visible:text-white focus-visible:outline-none focus-visible:underline underline-offset-4 transition-colors">Example</Link></li>
-              <li><Link href="/contact" className="text-white/70 hover:text-white focus-visible:text-white focus-visible:outline-none focus-visible:underline underline-offset-4 transition-colors">Build Workflow</Link></li>
+              <li><Link href="/build" className="text-white/70 hover:text-white focus-visible:text-white focus-visible:outline-none focus-visible:underline underline-offset-4 transition-colors">Build Workflow</Link></li>
             </ul>
           </div>
 
@@ -58,7 +58,7 @@ export default function SiteFooter() {
               COMPANY
             </h4>
             <ul className="space-y-1.5 lg:space-y-2 text-[11px] lg:text-xs font-mono">
-              <li><Link href="/contact" className="text-white/70 hover:text-white focus-visible:text-white focus-visible:outline-none focus-visible:underline underline-offset-4 transition-colors">Contact</Link></li>
+              <li><Link href="/build" className="text-white/70 hover:text-white focus-visible:text-white focus-visible:outline-none focus-visible:underline underline-offset-4 transition-colors">Build Workflow</Link></li>
               <li><a href="mailto:hello@boverse.ai" className="text-white/70 hover:text-white focus-visible:text-white focus-visible:outline-none focus-visible:underline underline-offset-4 transition-colors">hello@boverse.ai</a></li>
             </ul>
           </div>

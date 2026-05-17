@@ -9,6 +9,18 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: process.cwd(),
   },
+
+  // The /contact page was renamed to /build (the workflow generator). Keep
+  // the old path working for any external links, bookmarks, or shared URLs.
+  async redirects() {
+    return [
+      {
+        source: '/contact',
+        destination: '/build',
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

@@ -6,7 +6,6 @@ import { usePathname } from 'next/navigation';
 const navItems = [
   { href: '/process', label: 'PROCESS' },
   { href: '/example', label: 'EXAMPLE' },
-  { href: '/contact', label: 'CONTACT' },
 ];
 
 export default function SiteHeader() {
@@ -49,7 +48,7 @@ export default function SiteHeader() {
           </nav>
 
           <Link
-            href="/contact"
+            href="/build"
             className="hidden sm:inline-flex px-3 lg:px-4 py-2 lg:py-2.5 border border-white text-white font-mono text-[10px] lg:text-[11px] tracking-widest hover:bg-white hover:text-black focus-visible:bg-white focus-visible:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black transition-all duration-200"
           >
             BUILD WORKFLOW
@@ -83,7 +82,7 @@ export default function SiteHeader() {
                 );
               })}
               <Link
-                href="/contact"
+                href="/build"
                 className="px-4 py-3 text-white border-t border-white/20 mt-1 pt-3 hover:bg-white/5 focus-visible:bg-white/5 focus-visible:outline-none"
               >
                 BUILD WORKFLOW →

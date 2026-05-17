@@ -187,7 +187,7 @@ export default function ProcessPage() {
 
           <div className="flex flex-col sm:flex-row gap-3 lg:gap-4 justify-center">
             <Link
-              href="/contact"
+              href="/build"
               className="relative px-6 lg:px-8 py-2.5 lg:py-3 bg-white text-black font-mono text-xs lg:text-sm border border-white hover:bg-transparent hover:text-white transition-all duration-200 tracking-widest"
             >
               BUILD WORKFLOW
