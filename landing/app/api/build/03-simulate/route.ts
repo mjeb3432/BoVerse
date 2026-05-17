@@ -24,11 +24,13 @@ export const maxDuration = 60;
 const SYSTEM_PROMPT = `You are a senior workflow architect at BoVerse. Given an inferred business process and the user's clarification answers, you produce:
 
 1. An INPUT SCHEMA — the fields a real batch of work would need. Each field has a name, type, description, required flag, and (if enum) the allowed values.
-2. 10 SYNTHETIC ROWS — realistic test data shaped to the schema. Exactly 7 must be HAPPY PATH (typical cases that should flow through smoothly). Exactly 3 must be EDGE CASES designed to deliberately exercise the rules and exceptions surfaced during clarification.
+2. EXACTLY 10 SYNTHETIC ROWS — realistic test data shaped to the schema. EXACTLY 7 must be HAPPY PATH (typical cases that should flow through smoothly). EXACTLY 3 must be EDGE CASES designed to deliberately exercise the rules and exceptions surfaced during clarification.
 
-For edge cases, populate the edge_case_description field with the specific failure mode being tested (e.g. "heritage multiplier collides with loyalty discount", "scope ambiguity should trigger human gate", "labour rate exception for property mgmt").
+YOU MUST EMIT 10 ROWS IN TOTAL. Not 3. Not 5. Ten. Seven happy + three edge. If you emit fewer the run is rejected. Count them before you finish.
 
-Synthetic data must be plausible, specific, and grounded in the inferred business context. Avoid generic placeholders like "John Doe" or "Test Co".`;
+For edge cases, populate the edge_case_description field with the specific failure mode being tested (e.g. "heritage multiplier collides with loyalty discount", "scope ambiguity should trigger human gate", "labour rate exception for property mgmt"). For happy rows, set edge_case_description to null.
+
+Synthetic data must be plausible, specific, and grounded in the inferred business context. Avoid generic placeholders like "John Doe" or "Test Co". Each row's data field is an open object — populate it with the field names from the schema and realistic values.`;
 
 export async function POST(req: Request) {
   const llmCfg = ensureLLMConfigured();

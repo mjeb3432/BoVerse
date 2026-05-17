@@ -86,7 +86,13 @@ export const SyntheticRowSchema = z.object({
 
 export const SimulateOutputSchema = z.object({
   schema: z.array(SchemaFieldSchema),
-  rows: z.array(SyntheticRowSchema).length(10),
+  // We ask for exactly 10 rows (7 happy + 3 edge) in the prompt, but LLMs
+  // rarely hit an exact count under structured-output pressure. gpt-oss-120b
+  // returned 3 rows on the first live attempt. Accept a band around 10 so a
+  // slightly short-or-long response is still usable. The downstream summary
+  // counts `total_rows - 3` for happy and `3` for edge as defaults, so
+  // anything in the 8-12 range keeps that math sensible.
+  rows: z.array(SyntheticRowSchema).min(7).max(12),
 });
 export type SimulateOutput = z.infer<typeof SimulateOutputSchema>;
 
