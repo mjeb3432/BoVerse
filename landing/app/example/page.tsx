@@ -384,7 +384,7 @@ export default function ExamplePage() {
 
           <div className="flex flex-col sm:flex-row gap-3 lg:gap-4">
             <Link
-              href="/contact"
+              href="/build"
               className="inline-flex items-center justify-center px-6 lg:px-8 py-3 lg:py-4 border-2 border-white bg-white text-black font-mono text-xs lg:text-sm tracking-widest hover:bg-black hover:text-white focus-visible:bg-black focus-visible:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black transition-all duration-200"
             >
               MAP YOUR OPERATING STACK →

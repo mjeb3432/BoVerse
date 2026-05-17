@@ -41,7 +41,7 @@ export default function NotFound() {
                 ← BACK TO HOME
               </Link>
               <Link
-                href="/contact"
+                href="/build"
                 className="inline-flex items-center justify-center px-6 lg:px-8 py-3 lg:py-4 border-2 border-white/30 text-white font-mono text-xs lg:text-sm tracking-widest hover:border-white focus-visible:border-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black transition-all duration-200"
               >
                 BUILD WORKFLOW →
@@ -118,12 +118,12 @@ export default function NotFound() {
             </li>
             <li>
               <Link
-                href="/contact"
+                href="/build"
                 className="group flex items-baseline gap-4 lg:gap-6 py-3 lg:py-4 border-b border-white/10 hover:border-white/40 focus-visible:border-white focus-visible:outline-none transition-colors"
               >
                 <span className="text-white/40 text-xs lg:text-sm w-12 lg:w-16 shrink-0">004</span>
-                <span className="text-white text-base lg:text-xl tracking-wide">/contact</span>
-                <span className="text-white/50 text-xs lg:text-sm flex-1">Build workflow · intake form</span>
+                <span className="text-white text-base lg:text-xl tracking-wide">/build</span>
+                <span className="text-white/50 text-xs lg:text-sm flex-1">Build workflow · generator</span>
                 <span className="text-white/40 group-hover:text-white transition-colors">→</span>
               </Link>
             </li>
