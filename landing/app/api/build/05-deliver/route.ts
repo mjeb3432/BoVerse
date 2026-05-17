@@ -227,7 +227,10 @@ async function executeStep(
 
   // Real LLM call. Substitute {{placeholders}} with row data, then append the
   // retrieved RAG context block so the model has the relevant assets in scope.
-  const prompt = renderPromptTemplate(step.prompt, row.data) + ragContextBlock;
+  // `row.data` is typed as `unknown` (the schema is open-shape per-process);
+  // cast to a record for templating.
+  const rowDataRec = (row.data ?? {}) as Record<string, unknown>;
+  const prompt = renderPromptTemplate(step.prompt, rowDataRec) + ragContextBlock;
   const { text } = await generateText({
     model: fastModel(),
     messages: [

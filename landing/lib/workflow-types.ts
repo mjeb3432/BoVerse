@@ -75,7 +75,13 @@ export const SyntheticRowSchema = z.object({
   // Nullable (see note on ClarifyQuestionSchema). Happy rows emit null here;
   // edge rows describe the failure mode being tested.
   edge_case_description: z.string().nullable(),
-  data: z.record(z.string(), z.unknown()),
+  // The row payload is open-shape (the schema differs per inferred process).
+  // We can't use `z.record()` here because it compiles to JSON-Schema
+  // `propertyNames`, which OpenAI strict mode rejects with
+  //   "propertyNames is not supported [unsupported_propertyNames]".
+  // `z.unknown()` becomes `{}` (no constraints) in the emitted schema, which
+  // OpenAI accepts. Consumers cast to Record<string, unknown> on read.
+  data: z.unknown(),
 });
 
 export const SimulateOutputSchema = z.object({
