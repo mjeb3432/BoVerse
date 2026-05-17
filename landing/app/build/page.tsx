@@ -81,6 +81,23 @@ export default function BuildPage() {
     sessionStorage.setItem(SS_KEY, JSON.stringify(state));
   }, [state]);
 
+  // Recovery guard: if state is inconsistent (e.g. stage advanced past a
+  // failed API call so the prerequisite output is missing), roll back to the
+  // last stage we have inputs for. Without this, users land on an empty page
+  // with no actionable affordance.
+  useEffect(() => {
+    if (!hydrated.current) return;
+    if (state.stage === 'clarify' && !state.ingest_output) {
+      setState((s) => ({ ...s, stage: 'ingest' }));
+    } else if (state.stage === 'simulate' && !state.clarify_output) {
+      setState((s) => ({ ...s, stage: 'clarify' }));
+    } else if (state.stage === 'generate' && !state.simulate_output) {
+      setState((s) => ({ ...s, stage: 'simulate' }));
+    } else if (state.stage === 'deliver' && !state.generate_output) {
+      setState((s) => ({ ...s, stage: 'generate' }));
+    }
+  }, [state.stage, state.ingest_output, state.clarify_output, state.simulate_output, state.generate_output]);
+
   const resetSession = async () => {
     sessionStorage.removeItem(SS_KEY);
     setState({ session_id: null, stage: 'idle', uploaded_files: [], exec_events: [] });
@@ -141,6 +158,10 @@ export default function BuildPage() {
         body: JSON.stringify({ session_id: state.session_id, ingest_output: state.ingest_output }),
       });
       const data = await r.json();
+      if (data.error || !data.output) {
+        setError(data.message ?? data.error ?? 'Clarify failed: no output returned.');
+        return;
+      }
       setState((s) => ({ ...s, clarify_output: data.output }));
     } catch (e) {
       setError((e as Error).message);
@@ -175,6 +196,13 @@ export default function BuildPage() {
         }),
       });
       const data = await r.json();
+      if (data.error || !data.output) {
+        // CRITICAL: do NOT advance stage on error — otherwise StageGenerate
+        // renders nothing (its render gate is `simulate_output && ...`) and
+        // the user lands on an empty page with no way forward.
+        setError(data.message ?? data.error ?? 'Simulate failed: no output returned.');
+        return;
+      }
       setState((s) => ({ ...s, simulate_output: data.output, stage: 'generate' }));
     } catch (e) {
       setError((e as Error).message);
@@ -199,6 +227,10 @@ export default function BuildPage() {
         }),
       });
       const data = await r.json();
+      if (data.error || !data.output) {
+        setError(data.message ?? data.error ?? 'Generate failed: no output returned.');
+        return;
+      }
       setState((s) => ({ ...s, generate_output: data.output, stage: 'deliver' }));
     } catch (e) {
       setError((e as Error).message);
