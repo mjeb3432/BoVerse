@@ -6,10 +6,8 @@ Atomic workflows. Five primitives. Infinite forms. The workflow factory for SMBs
 
 | Path                                          | What it is                                                                                  |
 |-----------------------------------------------|---------------------------------------------------------------------------------------------|
-| `landing/`                                    | Marketing site + `/build` workflow generator (Next.js 16, React 19, Tailwind 4, TypeScript).|
-| `docx-service/`                               | Python FastAPI sidecar that renders the generated workflow as a production-grade `.docx` (python-docx). |
-| `render.yaml`                                 | Render Blueprint — deploys both services in one click from this repo.                       |
-| `landing/migrations/`                         | Postgres schema. Apply with `psql "$DATABASE_URL" -f landing/migrations/0001_workflow_sessions.sql`. |
+| `landing/`                                    | Marketing site + `/build` workflow generator (Next.js 16, React 19, Tailwind 4, TypeScript). Renders .docx in-process via the Node `docx` library. |
+| `landing/migrations/`                         | Postgres schema. Apply with `node scripts/migrate.mjs` or via Supabase SQL Editor.          |
 | `Context/BoVerse_Workflow_Factory_Design.md`  | Source-of-truth design doc, rev 6. APPROVED.                                                |
 | `Context/BoVerse_Workflow_Factory_TODOS.md`   | Workflow Factory backend TODOs (P0-P3 + v1.1 + v2 + infra).                                 |
 | `Context/BoVerse_Workflow_Factory_v1.docx`    | v1.0 spec (locked).                                                                         |
@@ -55,23 +53,21 @@ npm run start
 - `npm run dev:plain` — runs `next dev` without the auto-open wrapper
 - `npm run lint` — ESLint check
 
-## Production deploy (Render)
+## Production deploy (Vercel + Supabase)
 
-Both services (Next.js + python-docx sidecar) deploy together from this repo via the `render.yaml` Blueprint. Render's free tier handles both — no credit card needed. Services sleep after 15 min idle and take ~30s to wake; acceptable for a prototype.
+Single Vercel deployment for the Next.js app (including the `/api/build/05-deliver/docx` route which renders .docx in-process via the Node `docx` library). Supabase for Postgres.
 
-1. **Sign up at https://render.com** (free, no card)
-2. **Connect this GitHub repo** when prompted
-3. **New + → Blueprint** → select `mjeb3432/BoVerse` → Apply
-4. **Apply Postgres schema** to your DB:
-   ```bash
-   psql "$DATABASE_URL" -f landing/migrations/0001_workflow_sessions.sql
-   ```
-5. **Set environment variables** on the `boverse-landing` service in the Render dashboard:
+1. **Sign up at https://vercel.com** via GitHub (free Hobby tier)
+2. **Import the repo** `mjeb3432/BoVerse` → set Root Directory = `landing`
+3. **Sign up at https://supabase.com** via GitHub, create a project, copy the **Transaction pooler** connection string (port 6543) from Project Settings → Database
+4. **Apply Postgres schema** (one of):
+   - Supabase SQL Editor: paste contents of `landing/migrations/0001_workflow_sessions.sql` and Run
+   - Or locally: `cd landing && node scripts/migrate.mjs` (reads `DATABASE_URL` from `.env.local`)
+5. **Set environment variables** on the Vercel project:
    - `GOOGLE_GENERATIVE_AI_API_KEY` — get from https://aistudio.google.com/app/apikey
-   - `DATABASE_URL` — your Postgres connection string
-   - `DOCX_SERVICE_URL` — the URL Render generates for `boverse-docx` (something like `https://boverse-docx.onrender.com`)
+   - `DATABASE_URL` — your Supabase pooler connection string
 
-Pushing to `main` auto-deploys both services.
+Pushing to `main` auto-deploys.
 
 ## Architecture
 
