@@ -69,7 +69,7 @@ export default function SiteFooter() {
               STACK
             </h4>
             <ul className="space-y-1.5 lg:space-y-2 text-[11px] lg:text-xs font-mono text-white/70">
-              <li>AI SDK · Groq + Gemini</li>
+              <li>AI SDK · Cerebras + Groq + Gemini</li>
               <li>Next.js 16 on Vercel</li>
               <li>Supabase Postgres + pgvector</li>
             </ul>

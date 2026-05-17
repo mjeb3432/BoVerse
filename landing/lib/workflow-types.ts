@@ -47,7 +47,11 @@ export const ClarifyQuestionSchema = z.object({
 });
 
 export const ClarifyOutputSchema = z.object({
-  questions: z.array(ClarifyQuestionSchema).max(5),
+  // No `.max(5)` constraint here: Cerebras (the primary provider for this
+  // stage via fastModel) rejects `maxItems` in JSON schema with
+  //   "Invalid fields for schema with types ['array']: {'maxItems'}"
+  // The system prompt enforces "at most 5 questions" as a soft cap instead.
+  questions: z.array(ClarifyQuestionSchema),
 });
 export type ClarifyOutput = z.infer<typeof ClarifyOutputSchema>;
 
