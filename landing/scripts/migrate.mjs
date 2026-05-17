@@ -23,7 +23,11 @@ if (!process.env.DATABASE_URL) {
 }
 
 const migrationsDir = join(__dirname, '..', 'migrations');
-const files = ['0001_workflow_sessions.sql'];
+const files = [
+  '0001_workflow_sessions.sql',
+  '0002_rag_assets.sql',
+  '0003_rag_assets_loosen_type.sql',
+];
 
 const client = new Client({
   connectionString: process.env.DATABASE_URL,

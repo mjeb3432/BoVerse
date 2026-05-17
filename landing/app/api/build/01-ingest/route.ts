@@ -1,11 +1,15 @@
 // Stage 01 — INGEST. Accepts multipart/form-data with one or more files,
-// extracts text from each, then runs Gemini to produce structured inference.
+// extracts text from each, then runs the multimodal LLM (Gemini) to produce
+// structured inference. Multimodal is REQUIRED here — PDFs and images are
+// passed inline as image parts, and Groq (our text-only primary provider)
+// can't read them.
 
 import { NextResponse } from 'next/server';
 import { generateObject } from 'ai';
 import {
   ensureLLMConfigured,
   fastModel,
+  multimodalModel,
 } from '@/lib/llm';
 import { ensurePostgresConfigured, query } from '@/lib/postgres';
 import { parseFile } from '@/lib/file-parsers';
@@ -86,25 +90,45 @@ export async function POST(req: Request) {
   // Persist file references in Supabase storage if configured (best-effort).
   await persistArtifacts(sessionId, parsed);
 
-  // Run Gemini with structured output schema.
+  // Pick the model. If any inputs are images and we have a multimodal model
+  // available, use it; otherwise route text through the primary (Groq).
+  const needsMultimodal = imageParts.length > 0;
+  const mmModel = multimodalModel();
+  const modelToUse = needsMultimodal && mmModel ? mmModel : fastModel();
+
+  // If user uploaded images but we don't have multimodal capability, the
+  // image parts would be silently ignored. Surface that as a soft warning
+  // in the response so the UI can show a note.
+  const droppedImages = needsMultimodal && !mmModel;
+
   try {
     const { object } = await generateObject({
-      model: fastModel(),
+      model: modelToUse,
       schema: IngestOutputSchema,
       messages: [
         {
           role: 'user',
-          content: [
-            { type: 'text', text: SYSTEM_PROMPT },
-            { type: 'text', text: textBlocks.join('\n\n---\n\n') },
-            ...imageParts,
-          ],
-        },
+          content: needsMultimodal && mmModel
+            ? [
+                { type: 'text', text: SYSTEM_PROMPT },
+                { type: 'text', text: textBlocks.join('\n\n---\n\n') },
+                ...imageParts,
+              ]
+            : [
+                {
+                  type: 'text',
+                  text: `${SYSTEM_PROMPT}\n\n${textBlocks.join('\n\n---\n\n')}${droppedImages ? '\n\n[NOTE: image inputs were dropped — Gemini key not configured]' : ''}`,
+                },
+              ],
+      },
       ],
     });
 
     await saveStageOutput(sessionId, 'ingest_output', object, 'clarify');
-    return NextResponse.json({ output: object });
+    return NextResponse.json({
+      output: object,
+      ...(droppedImages ? { warning: 'Image inputs were dropped because no multimodal LLM (Gemini) key is configured. Text inputs were processed normally.' } : {}),
+    });
   } catch (err) {
     return NextResponse.json(
       { error: 'llm_error', message: (err as Error).message },

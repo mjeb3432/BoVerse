@@ -12,6 +12,7 @@
 import { generateText } from 'ai';
 import { ensureLLMConfigured, fastModel } from '@/lib/llm';
 import { ensurePostgresConfigured, query } from '@/lib/postgres';
+import { searchRagAssets, type RagAssetHit } from '@/lib/rag';
 import {
   GenerateOutputSchema,
   SimulateOutputSchema,
@@ -76,7 +77,7 @@ export async function POST(req: Request) {
           });
 
           try {
-            const result = await executeStep(step, row, generate.data, llmAvailable);
+            const result = await executeStep(step, row, generate.data, llmAvailable, sessionId);
             if (result.usedLLM) totalLlmCalls++;
 
             const stepResult = {
@@ -154,12 +155,14 @@ async function executeStep(
   step: GenerateOutput['steps'][number],
   row: SimulateOutput['rows'][number],
   workflow: GenerateOutput,
-  llmAvailable: boolean
+  llmAvailable: boolean,
+  sessionId: string
 ): Promise<{
   status: 'success' | 'failure' | 'gated_for_human' | 'skipped';
   output: unknown;
   trace: string;
   usedLLM: boolean;
+  ragHits?: Array<{ asset_name: string; similarity: number }>;
 }> {
   // Human-gated steps short-circuit in execution (we don't have a human in
   // the loop during the demo — we record that we'd pause here and continue).
@@ -172,14 +175,42 @@ async function executeStep(
     };
   }
 
+  // RAG retrieval. If this step declared rag_assets, search pgvector for the
+  // most semantically similar assets stored in the session's library. Use a
+  // query built from the step's name + rationale + inputs (so retrieval keys
+  // on what the step is *doing*, not just what it's called).
+  let ragHits: RagAssetHit[] = [];
+  const hasRagDeclared = Array.isArray(step.rag_assets) && step.rag_assets.length > 0;
+  if (hasRagDeclared) {
+    const ragQuery = `${step.name}\n${step.rationale ?? ''}\nInputs: ${step.inputs.join(', ')}`;
+    try {
+      ragHits = await searchRagAssets(sessionId, ragQuery, 3);
+    } catch (err) {
+      // RAG retrieval failures must not block step execution. Log and continue
+      // with an empty hit list — the step still runs, just without retrieved
+      // context.
+      console.error('[05-deliver] RAG retrieval failed:', (err as Error).message);
+    }
+  }
+  const ragSummary = ragHits.map((h) => ({ asset_name: h.asset_name, similarity: h.similarity }));
+  const ragContextBlock = ragHits.length
+    ? `\n\n## Retrieved knowledge (top ${ragHits.length} by similarity)\n\n${ragHits
+        .map((h) => `### ${h.asset_name} (${h.asset_type}, sim=${h.similarity.toFixed(2)})\n${h.content}`)
+        .join('\n\n')}`
+    : '';
+
   // Deterministic steps: produce structured stub output so the trace narrative
   // looks real. In a full build these would be real adapters (lookups, math).
   if (step.model === 'deterministic') {
+    const ragNote = ragHits.length
+      ? ` RAG retrieved ${ragHits.length} asset(s): ${ragHits.map((h) => `${h.asset_name}(${h.similarity.toFixed(2)})`).join(', ')}.`
+      : '';
     return {
       status: 'success',
-      output: deterministicStub(step, row),
-      trace: `Step ${step.id} (${step.name}) executed deterministically. Inputs: ${step.inputs.join(', ')}. Outputs: ${step.outputs.join(', ')}.`,
+      output: { ...deterministicStub(step, row), retrieved_assets: ragSummary },
+      trace: `Step ${step.id} (${step.name}) executed deterministically. Inputs: ${step.inputs.join(', ')}. Outputs: ${step.outputs.join(', ')}.${ragNote}`,
       usedLLM: false,
+      ragHits: ragSummary,
     };
   }
 
@@ -187,30 +218,36 @@ async function executeStep(
   if (!llmAvailable || !step.prompt) {
     return {
       status: 'success',
-      output: { note: 'LLM step simulated — no Gemini key configured or no prompt template.' },
-      trace: `Step ${step.id} (${step.name}) would invoke ${step.model} with the prompt template. (Configure GOOGLE_GENERATIVE_AI_API_KEY to run for real.)`,
+      output: { note: 'LLM step simulated — no LLM key configured or no prompt template.', retrieved_assets: ragSummary },
+      trace: `Step ${step.id} (${step.name}) would invoke ${step.model} with the prompt template. (Configure GROQ_API_KEY or GOOGLE_GENERATIVE_AI_API_KEY to run for real.)`,
       usedLLM: false,
+      ragHits: ragSummary,
     };
   }
 
-  // Real LLM call. Substitute {{placeholders}} with row data.
-  const prompt = renderPromptTemplate(step.prompt, row.data);
+  // Real LLM call. Substitute {{placeholders}} with row data, then append the
+  // retrieved RAG context block so the model has the relevant assets in scope.
+  const prompt = renderPromptTemplate(step.prompt, row.data) + ragContextBlock;
   const { text } = await generateText({
     model: fastModel(),
     messages: [
       {
         role: 'system',
-        content: `You are executing step "${step.name}" in the "${workflow.workflow_name}" workflow. Respond with concise, structured output that downstream steps can consume.`,
+        content: `You are executing step "${step.name}" in the "${workflow.workflow_name}" workflow. Respond with concise, structured output that downstream steps can consume.${ragHits.length ? ' Use the Retrieved knowledge block at the end of the user message to ground your response.' : ''}`,
       },
       { role: 'user', content: prompt },
     ],
   });
 
+  const ragNote = ragHits.length
+    ? ` Grounded on ${ragHits.length} retrieved asset(s): ${ragHits.map((h) => `${h.asset_name}(${h.similarity.toFixed(2)})`).join(', ')}.`
+    : '';
   return {
     status: 'success',
-    output: { response: text },
-    trace: `Step ${step.id} (${step.name}) ran on ${step.model} with rendered prompt. Response: ${text.slice(0, 200)}${text.length > 200 ? '…' : ''}`,
+    output: { response: text, retrieved_assets: ragSummary },
+    trace: `Step ${step.id} (${step.name}) ran on ${step.model} with rendered prompt.${ragNote} Response: ${text.slice(0, 200)}${text.length > 200 ? '…' : ''}`,
     usedLLM: true,
+    ragHits: ragSummary,
   };
 }
 

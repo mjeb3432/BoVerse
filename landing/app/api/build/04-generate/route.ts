@@ -6,6 +6,7 @@ import { NextResponse } from 'next/server';
 import { generateObject } from 'ai';
 import { ensureLLMConfigured, reasoningModel } from '@/lib/llm';
 import { ensurePostgresConfigured, query } from '@/lib/postgres';
+import { upsertRagAssets } from '@/lib/rag';
 import {
   ClarifyAnswersSchema,
   GenerateOutputSchema,
@@ -76,7 +77,32 @@ export async function POST(req: Request) {
     });
 
     await saveStageOutput(sessionId, 'generate_output', object, 'deliver');
-    return NextResponse.json({ output: object });
+
+    // Seed the workflow's rag_library into pgvector. Each asset gets a Gemini
+    // text-embedding-004 vector so Stage 05's retrieve steps can do real
+    // similarity search instead of returning stubs. Best-effort — embedding
+    // failures or missing keys don't block returning the generated workflow.
+    let ragSeeded: Array<{ id: string | null; asset_name: string }> = [];
+    try {
+      ragSeeded = await upsertRagAssets(
+        sessionId,
+        object.rag_library.map((a) => ({
+          asset_name: a.asset_name,
+          asset_type: a.asset_type,
+          description: a.description,
+        }))
+      );
+    } catch (err) {
+      // Log but don't fail Stage 04 — the workflow is still usable, just
+      // without persistent RAG (Stage 05 will fall back to keyword match).
+      console.error('[04-generate] RAG seeding failed:', (err as Error).message);
+    }
+
+    return NextResponse.json({
+      output: object,
+      rag_seeded: ragSeeded.filter((x) => x.id !== null).length,
+      rag_total: object.rag_library.length,
+    });
   } catch (err) {
     return NextResponse.json(
       { error: 'llm_error', message: (err as Error).message },
