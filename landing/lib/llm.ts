@@ -32,15 +32,22 @@ export const HAS_GOOGLE_KEY = Boolean(process.env.GOOGLE_GENERATIVE_AI_API_KEY);
 export const HAS_GROQ_KEY = Boolean(process.env.GROQ_API_KEY);
 export const HAS_ANY_LLM = HAS_GOOGLE_KEY || HAS_GROQ_KEY;
 
-// PRIMARY structured-output workhorse. Groq Llama 3.3 70B first because of
-// the much higher request ceiling; Gemini as fallback if Groq key absent.
-// Both providers support JSON-mode via the AI SDK's `generateObject`.
+// PRIMARY structured-output workhorse. Groq `openai/gpt-oss-120b` first
+// because of the much higher request ceiling; Gemini as fallback if Groq
+// key absent.
+//
+// Why gpt-oss-120b instead of llama-3.3-70b-versatile: the AI SDK calls
+// `generateObject` in strict `json_schema` mode by default. llama-3.3-70b
+// only supports loose JSON mode and errors with
+//   "This model does not support response format `json_schema`"
+// gpt-oss-120b natively supports json_schema and is on the same free tier.
+// See https://console.groq.com/docs/structured-outputs#supported-models.
 export const fastModel = () => {
-  if (HAS_GROQ_KEY) return groq('llama-3.3-70b-versatile');
+  if (HAS_GROQ_KEY) return groq('openai/gpt-oss-120b');
   return google('gemini-2.5-flash');
 };
 
-// Stage 04 workflow generation. Llama 3.3 70B handles the ~20-step output
+// Stage 04 workflow generation. gpt-oss-120b handles the ~20-step output
 // with primitive/actor/model/prompt fields at quality parity with Gemini
 // 2.5-flash (verified on the "Electrical Services Quoting Process" run).
 export const reasoningModel = () => fastModel();
