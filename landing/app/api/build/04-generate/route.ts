@@ -5,7 +5,7 @@
 import { NextResponse } from 'next/server';
 import { generateObject } from 'ai';
 import { ensureLLMConfigured, reasoningModel } from '@/lib/llm';
-import { createServerSupabase, ensureSupabaseConfigured } from '@/lib/supabase';
+import { ensurePostgresConfigured, query } from '@/lib/postgres';
 import {
   ClarifyAnswersSchema,
   GenerateOutputSchema,
@@ -80,17 +80,16 @@ export async function POST(req: Request) {
 
 async function saveStageOutput(
   sessionId: string,
-  column: string,
+  column: 'generate_output',
   output: unknown,
   nextStage: string
 ) {
   if (sessionId.startsWith('local-')) return;
-  if (!ensureSupabaseConfigured().ok) return;
-  const supabase = createServerSupabase()!;
-  await supabase
-    .from('workflow_sessions')
-    .update({ [column]: output, current_stage: nextStage })
-    .eq('id', sessionId);
+  if (!ensurePostgresConfigured().ok) return;
+  await query(
+    `update workflow_sessions set ${column} = $1, current_stage = $2 where id = $3`,
+    [JSON.stringify(output), nextStage, sessionId]
+  );
 }
 
 function mockGenerateOutput(): GenerateOutput {

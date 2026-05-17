@@ -1,6 +1,6 @@
 -- BoVerse Workflow Factory — initial schema for /build sessions.
--- Apply in Supabase SQL Editor (Project → SQL Editor → New query) or via the
--- Supabase CLI: supabase db push.
+-- Works with any Postgres (managed or self-hosted). Apply with:
+--   psql "$DATABASE_URL" -f migrations/0001_workflow_sessions.sql
 
 create extension if not exists "pgcrypto";
 
@@ -9,7 +9,7 @@ create extension if not exists "pgcrypto";
 -- stages (ingest → clarify → simulate → generate → deliver). Stage outputs
 -- are stored as jsonb so the schema can evolve without migrations.
 
-create table if not exists public.workflow_sessions (
+create table if not exists workflow_sessions (
   id uuid primary key default gen_random_uuid(),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -27,10 +27,10 @@ create table if not exists public.workflow_sessions (
 );
 
 create index if not exists workflow_sessions_updated_at_idx
-  on public.workflow_sessions (updated_at desc);
+  on workflow_sessions (updated_at desc);
 
 -- Auto-update updated_at on every row change.
-create or replace function public.touch_updated_at()
+create or replace function touch_updated_at()
 returns trigger
 language plpgsql
 as $$
@@ -40,19 +40,19 @@ begin
 end;
 $$;
 
-drop trigger if exists workflow_sessions_touch on public.workflow_sessions;
+drop trigger if exists workflow_sessions_touch on workflow_sessions;
 create trigger workflow_sessions_touch
-before update on public.workflow_sessions
-for each row execute function public.touch_updated_at();
+before update on workflow_sessions
+for each row execute function touch_updated_at();
 
 -- ─── workflow_step_executions ─────────────────────────────────────────────
 -- Stage 05 real-per-row execution. Each row stores one (session, row, step)
 -- result so the UI can render live progress, and so we can rebuild the trace
 -- after a refresh.
 
-create table if not exists public.workflow_step_executions (
+create table if not exists workflow_step_executions (
   id uuid primary key default gen_random_uuid(),
-  session_id uuid not null references public.workflow_sessions (id) on delete cascade,
+  session_id uuid not null references workflow_sessions (id) on delete cascade,
   synthetic_row_id text not null,
   synthetic_row_kind text not null check (synthetic_row_kind in ('happy', 'edge')),
   step_id text not null,
@@ -67,24 +67,4 @@ create table if not exists public.workflow_step_executions (
 );
 
 create index if not exists workflow_step_executions_session_idx
-  on public.workflow_step_executions (session_id, synthetic_row_id, step_id);
-
--- ─── Storage bucket: workflow-artifacts ───────────────────────────────────
--- Uploaded source files (PDF, image, email, spreadsheet) live here. Reads
--- and writes go through the service role on the server, so we keep the
--- bucket private.
-
-insert into storage.buckets (id, name, public)
-values ('workflow-artifacts', 'workflow-artifacts', false)
-on conflict (id) do nothing;
-
--- ─── RLS ──────────────────────────────────────────────────────────────────
--- For v1, the server uses the service role to read/write directly and there
--- is no per-user concept yet. We enable RLS and grant nothing to anon — all
--- access happens via the server. This means anonymous users can't directly
--- query workflow_sessions from the browser (which is what we want).
-
-alter table public.workflow_sessions enable row level security;
-alter table public.workflow_step_executions enable row level security;
-
--- No policies granted to anon. Service role bypasses RLS automatically.
+  on workflow_step_executions (session_id, synthetic_row_id, step_id);

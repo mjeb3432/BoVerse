@@ -1,0 +1,33 @@
+# Fly.io config for the BoVerse docx-service.
+# Deploy:
+#   cd docx-service
+#   fly launch --no-deploy --copy-config --name boverse-docx
+#   fly deploy
+#
+# After deploy, set DOCX_SERVICE_URL in the Next.js app's secrets:
+#   cd ../landing
+#   fly secrets set DOCX_SERVICE_URL=https://boverse-docx.fly.dev
+
+app = "boverse-docx"
+primary_region = "iad"  # change if you'd prefer a region closer to you
+
+[build]
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"   # save money: scale to zero when idle
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "10s"
+    method = "GET"
+    path = "/health"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"

@@ -1,6 +1,10 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
+  // Standalone output for Docker / Fly.io deploys. Bundles only the files
+  // needed to run the server (no full node_modules in the runtime image).
+  output: 'standalone',
+
   // Pin Turbopack's workspace root to the directory where Next was invoked
   // (the landing project root). Prevents Next.js from walking up the tree and
   // accidentally selecting a stray lockfile (e.g. C:\Users\<you>\package-lock.json

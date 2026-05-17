@@ -11,7 +11,7 @@
 
 import { generateText } from 'ai';
 import { ensureLLMConfigured, fastModel } from '@/lib/llm';
-import { createServerSupabase, ensureSupabaseConfigured } from '@/lib/supabase';
+import { ensurePostgresConfigured, query } from '@/lib/postgres';
 import {
   GenerateOutputSchema,
   SimulateOutputSchema,
@@ -289,28 +289,31 @@ async function persistStepExecution(
   }
 ) {
   if (sessionId.startsWith('local-')) return;
-  if (!ensureSupabaseConfigured().ok) return;
-  const supabase = createServerSupabase()!;
-  await supabase.from('workflow_step_executions').insert({
-    session_id: sessionId,
-    synthetic_row_id: row.row_id,
-    synthetic_row_kind: row.kind,
-    step_id: step.id,
-    step_name: step.name,
-    status: result.status,
-    finished_at: new Date().toISOString(),
-    duration_ms: result.duration_ms,
-    output: result.output as object,
-    trace_message: result.trace_message,
-  });
+  if (!ensurePostgresConfigured().ok) return;
+  await query(
+    `insert into workflow_step_executions
+       (session_id, synthetic_row_id, synthetic_row_kind, step_id, step_name,
+        status, finished_at, duration_ms, output, trace_message)
+     values ($1, $2, $3, $4, $5, $6, now(), $7, $8, $9)`,
+    [
+      sessionId,
+      row.row_id,
+      row.kind,
+      step.id,
+      step.name,
+      result.status,
+      result.duration_ms,
+      JSON.stringify(result.output),
+      result.trace_message,
+    ]
+  );
 }
 
 async function saveDeliverOutput(sessionId: string, output: unknown) {
   if (sessionId.startsWith('local-')) return;
-  if (!ensureSupabaseConfigured().ok) return;
-  const supabase = createServerSupabase()!;
-  await supabase
-    .from('workflow_sessions')
-    .update({ deliver_output: output, current_stage: 'complete' })
-    .eq('id', sessionId);
+  if (!ensurePostgresConfigured().ok) return;
+  await query(
+    `update workflow_sessions set deliver_output = $1, current_stage = 'complete' where id = $2`,
+    [JSON.stringify(output), sessionId]
+  );
 }
