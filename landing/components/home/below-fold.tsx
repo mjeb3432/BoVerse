@@ -167,56 +167,56 @@ export default function HomeBelowFold() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-start">
             <div>
               <div className="text-[11px] font-mono text-white/40 tracking-widest mb-4">
-                APEX ELECTRICAL · WORKED EXAMPLE
+                THE SMB OPERATING STACK
               </div>
 
               <h2 className="text-3xl lg:text-5xl font-bold font-mono tracking-wider leading-[1.1] mb-6 lg:mb-8" style={{ letterSpacing: '0.06em' }}>
-                A REAL WORKFLOW
-                <span className="block opacity-90 mt-1 lg:mt-2">WE BUILT.</span>
+                EVERY SCALING SMB
+                <span className="block opacity-90 mt-1 lg:mt-2">BREAKS THE SAME WAY.</span>
               </h2>
 
-              <p className="text-sm lg:text-base text-white/70 font-mono leading-relaxed mb-8 lg:mb-10">
-                A commercial and residential electrical contractor. 12 estimators.
-                15-25 quote requests a week. Three hours per quote, manually.
-                BoVerse turned the estimating manager&apos;s head into a workflow.
-                Now: 45 minutes. The senior estimator reviews exceptions.
-                The rest runs itself.
+              <p className="text-sm lg:text-base text-white/70 font-mono leading-relaxed mb-6 lg:mb-8">
+                Fourteen operating layers. Founder oversight. Lead gen. Sales. Scoping. Onboarding. Delivery. Knowledge. Finance. Management cadence. Support. HR. Strategy. Continuous improvement. AI itself.
+              </p>
+              <p className="text-sm lg:text-base text-white/50 font-mono leading-relaxed mb-8 lg:mb-10">
+                Each layer has a recognizable reality, a recognizable tool sprawl, a recognizable friction. The leverage lives in the orchestration runtime that sits across all of them.
               </p>
 
               <Link
                 href="/example"
                 className="inline-flex items-center gap-2 text-xs lg:text-sm font-mono tracking-widest text-white border-b border-white/40 pb-1 hover:border-white transition-colors"
               >
-                SEE THE FULL EXAMPLE
+                SEE THE FULL STACK
                 <span aria-hidden="true">→</span>
               </Link>
             </div>
 
-            {/* Workflow preview card */}
+            {/* Operating stack preview card */}
             <div className="border border-white/20 bg-black">
-              <div className="px-4 py-2 border-b border-white/10 text-[10px] font-mono text-white/40 tracking-widest bg-white/[0.02]">
-                JOB ESTIMATING WORKFLOW · 22 STEPS
+              <div className="px-4 py-2 border-b border-white/10 text-[10px] font-mono text-white/40 tracking-widest bg-white/[0.02] flex items-center justify-between">
+                <span>SMB OPERATING STACK · 14 LAYERS</span>
+                <span className="text-white/30">L01—L14</span>
               </div>
               <div className="divide-y divide-white/5">
                 {[
-                  { id: "1.1", name: "Inquiry capture", actor: "AUTO" },
-                  { id: "1.2", name: "Client history lookup", actor: "AUTO" },
-                  { id: "2.1", name: "Scope extraction", actor: "AUTO" },
-                  { id: "2.2", name: "Labour hour calculation", actor: "AUTO" },
-                  { id: "3.4", name: "Senior estimator review", actor: "HUMAN" },
-                  { id: "4.1", name: "Quote PDF generation", actor: "AUTO" },
-                ].map((step) => (
-                  <div key={step.id} className="flex items-center gap-3 px-4 py-2.5">
-                    <span className="text-[10px] font-mono text-white/30 tracking-widest w-8">{step.id}</span>
-                    <span className="text-xs font-mono text-white flex-1">{step.name}</span>
-                    <span className={`text-[9px] font-mono tracking-widest px-1.5 py-0.5 border ${step.actor === 'HUMAN' ? 'border-orange-400/40 text-orange-400/80' : 'border-white/20 text-white/60'}`}>
-                      {step.actor}
+                  { id: "L01", name: "Founder / Executive Oversight", op: "BOTTLENECK" },
+                  { id: "L03", name: "Sales Process", op: "INCONSISTENT" },
+                  { id: "L06", name: "Delivery / Fulfillment", op: "SILO'D" },
+                  { id: "L07", name: "Knowledge & Documentation", op: "TRIBAL" },
+                  { id: "L09", name: "Management Cadence", op: "REACTIVE" },
+                  { id: "L14", name: "AI / Automation Layer", op: "FRAGMENTED" },
+                ].map((row) => (
+                  <div key={row.id} className="flex items-center gap-3 px-4 py-2.5">
+                    <span className="text-[10px] font-mono text-white/30 tracking-widest w-10 tabular-nums">{row.id}</span>
+                    <span className="text-xs font-mono text-white flex-1">{row.name}</span>
+                    <span className="text-[9px] font-mono tracking-widest px-1.5 py-0.5 border border-white/20 text-white/60">
+                      {row.op}
                     </span>
                   </div>
                 ))}
               </div>
               <div className="px-4 py-2 border-t border-white/10 text-[10px] font-mono text-white/30 tracking-widest text-center">
-                + 16 MORE STEPS
+                + 8 MORE LAYERS · MAPPED IN /EXAMPLE
               </div>
             </div>
           </div>

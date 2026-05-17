@@ -2,100 +2,172 @@ import SiteHeader from "@/components/site/site-header";
 import SiteFooter from "@/components/site/site-footer";
 import Link from "next/link";
 
-const businessMeta = [
-  { label: "REVENUE", value: "$8-12M" },
-  { label: "TEAM", value: "12 ESTIMATORS" },
-  { label: "STACK", value: "QB · SERVICETITAN · EXCEL" },
-  { label: "VOLUME", value: "15-25 QUOTES/WK" },
-  { label: "BEFORE", value: "3 HRS/QUOTE" },
-  { label: "AFTER", value: "45 MIN/QUOTE" },
+// ────────────────────────────────────────────────────────────────────────────
+// SMB Operating Stack — the generalized operating anatomy of a scaling SMB.
+// Every row is a recognizable layer. Each layer has a typical reality, a
+// typical tool sprawl, a typical friction, and a place where intelligence
+// and orchestration create leverage.
+// ────────────────────────────────────────────────────────────────────────────
+
+const operatingStack = [
+  {
+    n: "L01",
+    layer: "Founder / Executive Oversight",
+    reality: "Founder acts as central coordinator, escalation point, and institutional memory.",
+    sprawl: "Email · Slack · spreadsheets · phone · meetings",
+    friction: "Founder bottleneck · decisions trapped in conversations · unclear priorities · reactive management",
+    opportunity: "Founder dependency mapping · operational visibility · escalation orchestration · institutional memory",
+  },
+  {
+    n: "L02",
+    layer: "Lead Generation",
+    reality: "Multiple fragmented marketing channels with inconsistent attribution.",
+    sprawl: "CRM · Meta · LinkedIn · Google Ads · Klaviyo · HubSpot",
+    friction: "Attribution confusion · inconsistent lead quality · disconnected campaigns",
+    opportunity: "Lead intelligence · channel orchestration · campaign insight · whitespace detection",
+  },
+  {
+    n: "L03",
+    layer: "Sales Process",
+    reality: "Relationship-driven and inconsistent across reps.",
+    sprawl: "CRM · email · docs · proposals · Slack",
+    friction: "Follow-up inconsistency · proposal drift · pricing inconsistency · tribal sales knowledge",
+    opportunity: "Sales orchestration · proposal intelligence · pricing consistency · follow-up automation",
+  },
+  {
+    n: "L04",
+    layer: "Proposal / Scoping",
+    reality: "Scope often lives in emails and meetings, not in canonical objects.",
+    sprawl: "Docs · Notion · Slack · spreadsheets",
+    friction: "Scope ambiguity · delivery assumptions lost · poor handoff to operations",
+    opportunity: "Canonical scope objects · delivery alignment · risk detection",
+  },
+  {
+    n: "L05",
+    layer: "Client / Customer Onboarding",
+    reality: "Highly manual cross-functional coordination.",
+    sprawl: "Email · Asana · Slack · forms · spreadsheets",
+    friction: "Missing information · delays · unclear ownership · onboarding inconsistency",
+    opportunity: "Readiness orchestration · dependency tracking · intake workflows",
+  },
+  {
+    n: "L06",
+    layer: "Delivery / Fulfillment",
+    reality: "Cross-functional coordination across siloed tools and teams.",
+    sprawl: "PM tools · email · Slack · spreadsheets · industry tools",
+    friction: "Missed handoffs · unclear ownership · duplicated work · status confusion",
+    opportunity: "Operational orchestration layer · canonical project state",
+  },
+  {
+    n: "L07",
+    layer: "Knowledge & Documentation",
+    reality: "Tribal knowledge dominates; SOPs drift from practice.",
+    sprawl: "Shared drives · Notion · Google Docs",
+    friction: "Knowledge loss · inconsistent execution · onboarding friction",
+    opportunity: "Institutional memory · workflow wiki · tacit knowledge extraction",
+  },
+  {
+    n: "L08",
+    layer: "Financial Operations",
+    reality: "Finance disconnected from operational reality.",
+    sprawl: "QuickBooks · Excel · ERP · banking",
+    friction: "Margin leakage · delayed visibility · reconciliation pain",
+    opportunity: "Operational economics layer · reconciliation intelligence",
+  },
+  {
+    n: "L09",
+    layer: "Management Cadence",
+    reality: "Meetings and reporting inconsistent across functions.",
+    sprawl: "Spreadsheets · decks · email",
+    friction: "Weak accountability · reactive management · KPI inconsistency",
+    opportunity: "Operating rhythm orchestration · scorecards · management systems",
+  },
+  {
+    n: "L10",
+    layer: "Customer Support / Success",
+    reality: "Reactive support model with fragmented context.",
+    sprawl: "Helpdesk · email · Slack",
+    friction: "Issues fragmented · poor escalation · no pattern learning",
+    opportunity: "Support orchestration · pattern detection · escalation routing",
+  },
+  {
+    n: "L11",
+    layer: "HR / Staffing / Training",
+    reality: "Hiring and onboarding highly manual and unstructured.",
+    sprawl: "HRIS · docs · email",
+    friction: "Long ramp-up times · inconsistent training · weak role clarity",
+    opportunity: "Training intelligence · SOP generation · workflow learning",
+  },
+  {
+    n: "L12",
+    layer: "Strategic Planning",
+    reality: "Founder intuition dominates; forecasting is informal.",
+    sprawl: "Spreadsheets · PowerPoints · meetings",
+    friction: "Weak forecasting · hidden opportunities · reactive strategy",
+    opportunity: "Reflection layer · adjacency detection · bottleneck intelligence",
+  },
+  {
+    n: "L13",
+    layer: "Continuous Improvement",
+    reality: "Improvement dependent on heroic employees noticing.",
+    sprawl: "Informal conversations · tribal memory",
+    friction: "Lessons learned never systematized",
+    opportunity: "Innovation → quantification → orchestration loop",
+  },
+  {
+    n: "L14",
+    layer: "AI / Automation Layer",
+    reality: "Random disconnected AI experiments lacking governance.",
+    sprawl: "ChatGPT · Claude · Zapier · point copilots",
+    friction: "AI silos · inconsistent governance · workflow fragmentation",
+    opportunity: "Unified orchestration runtime · deterministic + probabilistic routing",
+  },
 ];
 
-const workflowMap = [
+// ────────────────────────────────────────────────────────────────────────────
+// What Happens As SMBs Scale — the operating stack stays the same, but
+// different layers break at different revenue stages. Operational maturity
+// is the new ladder.
+// ────────────────────────────────────────────────────────────────────────────
+
+const scaleStages = [
   {
-    stage: "01 INGESTION",
-    color: "text-white/90",
-    steps: [
-      { id: "1.1", name: "Inquiry capture", actor: "AUTO", model: "HAIKU" },
-      { id: "1.2", name: "Client history lookup", actor: "AUTO", model: "HAIKU" },
-      { id: "1.3", name: "Job type classification", actor: "AUTO", model: "HAIKU" },
-    ],
+    stage: "< $1M",
+    symptoms: "Founder does everything.",
+    constraint: "Sales consistency",
+    breaks: "Capacity",
   },
   {
-    stage: "02 TRANSFORMATION",
-    color: "text-white/90",
-    steps: [
-      { id: "2.1", name: "Scope extraction", actor: "AUTO", model: "SONNET" },
-      { id: "2.2", name: "Labour hour calculation", actor: "AUTO", model: "SONNET" },
-      { id: "2.3", name: "Materials costing", actor: "AUTO", model: "HAIKU" },
-      { id: "2.4", name: "Margin and markup", actor: "AUTO", model: "HAIKU" },
-      { id: "2.5", name: "Quote narrative", actor: "AUTO", model: "SONNET" },
-    ],
+    stage: "$1 – 3M",
+    symptoms: "Early team forms; founder begins to delegate.",
+    constraint: "Delegation",
+    breaks: "Quality consistency",
   },
   {
-    stage: "03 VALIDATION",
-    color: "text-white/90",
-    steps: [
-      { id: "3.1", name: "Rules validation", actor: "AUTO", model: "HAIKU" },
-      { id: "3.2", name: "Estimator review · failed", actor: "HUMAN", model: "—" },
-      { id: "3.3", name: "Value threshold check", actor: "AUTO", model: "HAIKU" },
-      { id: "3.4", name: "Senior estimator review", actor: "HUMAN", model: "—" },
-      { id: "3.5", name: "Pre-dispatch review", actor: "HUMAN", model: "—" },
-    ],
+    stage: "$3 – 5M",
+    symptoms: "Functional silos emerge between sales, ops, finance.",
+    constraint: "Coordination",
+    breaks: "Communication",
   },
   {
-    stage: "04 ACTION",
-    color: "text-white/90",
-    steps: [
-      { id: "4.1", name: "Quote PDF generation", actor: "AUTO", model: "HAIKU" },
-      { id: "4.2", name: "Quote dispatch", actor: "AUTO", model: "HAIKU" },
-      { id: "4.3", name: "QuickBooks + log update", actor: "AUTO", model: "HAIKU" },
-    ],
+    stage: "$5 – 10M",
+    symptoms: "Middle management strain; founder still operates as escalation point.",
+    constraint: "Operational orchestration",
+    breaks: "Visibility / accountability",
   },
   {
-    stage: "05 FEEDBACK",
-    color: "text-white/90",
-    steps: [
-      { id: "5.1", name: "Win/loss tracking", actor: "AUTO", model: "HAIKU" },
-      { id: "5.2", name: "Weekly accuracy report", actor: "AUTO", model: "SONNET" },
-      { id: "5.3", name: "Rate table update trigger", actor: "HYBRID", model: "SONNET" },
-    ],
+    stage: "$10 – 25M",
+    symptoms: "Process complexity rises; tribal knowledge starts breaking.",
+    constraint: "Institutional memory",
+    breaks: "Cross-functional alignment",
+  },
+  {
+    stage: "$25M +",
+    symptoms: "Systems fragmentation across business units.",
+    constraint: "Strategic coordination",
+    breaks: "Organizational agility",
   },
 ];
-
-const ragAssets = [
-  { name: "Labour rate table", type: "PRICING", status: "PROVIDED" },
-  { name: "Material price list", type: "PRICING", status: "PROVIDED" },
-  { name: "Margin rules", type: "RULES", status: "NEEDS CAPTURE" },
-  { name: "Validation rules", type: "RULES", status: "NEEDS CAPTURE" },
-  { name: "Client tier registry", type: "REGISTRY", status: "PROVIDED" },
-  { name: "Job taxonomy", type: "WIKI", status: "INFERRED" },
-  { name: "Sample quotes · 5 approved", type: "EXAMPLES", status: "PROVIDED" },
-  { name: "Complexity multipliers", type: "RULES", status: "NEEDS CAPTURE" },
-];
-
-const syntheticRows = [
-  { id: "APX-2025-001", client: "Greenfield Homes", job: "New build · 4BR residential", flag: null },
-  { id: "APX-2025-002", client: "Parkview Medical Centre", job: "Commercial · consulting suite", flag: null },
-  { id: "APX-2025-003", client: "R. and T. Mallory", job: "Reno · heritage rewire", flag: null },
-  { id: "APX-2025-008", client: "Rivera Constructions", job: "Commercial fit-out", flag: "MISSING FIELD" },
-  { id: "APX-2025-009", client: "Greenfield Homes", job: "New build · 4BR residential", flag: "DUPLICATE" },
-  { id: "APX-2025-010", client: "Metro Retail Group", job: "12 stores · staged · TBC", flag: "AMBIGUOUS SCOPE" },
-];
-
-function StatusBadge({ status }: { status: string }) {
-  const color =
-    status === "PROVIDED"
-      ? "border-white/40 text-white/80"
-      : status === "INFERRED"
-      ? "border-yellow-400/40 text-yellow-400/80"
-      : "border-orange-400/40 text-orange-400/80";
-  return (
-    <span className={`text-[9px] font-mono tracking-widest px-2 py-0.5 border ${color}`}>
-      {status}
-    </span>
-  );
-}
 
 export default function ExamplePage() {
   return (
@@ -108,178 +180,220 @@ export default function ExamplePage() {
           <div className="absolute top-0 left-0 w-8 h-8 lg:w-12 lg:h-12 border-t-2 border-l-2 border-white/20"></div>
           <div className="absolute top-0 right-0 w-8 h-8 lg:w-12 lg:h-12 border-t-2 border-r-2 border-white/20"></div>
 
-          <div className="container mx-auto px-6 lg:px-16 py-20 lg:py-32 max-w-6xl">
+          <div className="container mx-auto px-6 lg:px-16 py-20 lg:py-32 max-w-7xl">
             <div className="flex items-center gap-2 mb-6 opacity-60">
               <div className="w-8 h-px bg-white"></div>
-              <span className="text-white text-[10px] font-mono tracking-wider">EXAMPLE · 001</span>
+              <span className="text-white text-[10px] font-mono tracking-wider">OPERATING STACK · 001</span>
               <div className="flex-1 h-px bg-white"></div>
             </div>
 
-            <h1 className="text-4xl lg:text-7xl font-bold font-mono tracking-wider leading-[1.05] mb-6 lg:mb-8" style={{ letterSpacing: '0.08em' }}>
-              APEX ELECTRICAL
-              <span className="block text-2xl lg:text-4xl opacity-70 mt-3 lg:mt-4 font-normal">Job estimating workflow</span>
+            <h1 className="text-4xl lg:text-7xl font-bold font-mono tracking-wider leading-[1.05] mb-6 lg:mb-8" style={{ letterSpacing: '0.06em' }}>
+              OPERATING ANATOMY
+              <span className="block opacity-90 mt-1 lg:mt-2">OF A SCALING SMB</span>
             </h1>
 
-            <p className="text-sm lg:text-lg text-white/70 font-mono leading-relaxed max-w-2xl mb-10 lg:mb-12">
-              A commercial and residential electrical contractor. 12 estimators. Three hours per quote.
-              BoVerse turned the estimating manager&apos;s head into a workflow. Now: 45 minutes per quote.
+            <p className="text-sm lg:text-lg text-white/70 font-mono leading-relaxed max-w-3xl mb-6">
+              We&apos;re not selling AI features. We&apos;re mapping and orchestrating the operating anatomy of a modern SMB — the fragmented workflows, silo&apos;d tools, missing handoffs, tacit knowledge, approvals, operational memory, and coordination friction that every scaling business hits.
             </p>
-
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 lg:gap-4">
-              {businessMeta.map((m) => (
-                <div key={m.label} className="border-l border-white/20 pl-3 lg:pl-4">
-                  <div className="text-[9px] font-mono text-white/40 tracking-widest mb-1">{m.label}</div>
-                  <div className="text-xs lg:text-sm font-mono text-white">{m.value}</div>
-                </div>
-              ))}
-            </div>
+            <p className="text-sm lg:text-lg text-white/50 font-mono leading-relaxed max-w-3xl">
+              The same stack repeats across verticals. The same layers break at the same revenue stages. The leverage lives in the orchestration runtime that sits across all of them.
+            </p>
           </div>
         </section>
 
-        {/* Workflow map */}
-        <section className="container mx-auto px-6 lg:px-16 py-16 lg:py-24 max-w-6xl">
-          <div className="flex items-center gap-2 mb-6 opacity-60">
+        {/* TABLE 01 — SMB Operating Stack */}
+        <section className="container mx-auto px-6 lg:px-16 py-16 lg:py-24 max-w-7xl">
+          <div className="flex items-center gap-2 mb-4 opacity-60">
             <div className="w-8 h-px bg-white"></div>
-            <span className="text-white text-[10px] font-mono tracking-wider">WORKFLOW MAP · 22 STEPS</span>
+            <span className="text-white text-[10px] font-mono tracking-wider">01 / SMB OPERATING STACK</span>
             <div className="flex-1 h-px bg-white"></div>
           </div>
 
-          <h2 className="text-2xl lg:text-4xl font-mono font-bold tracking-wider mb-3 lg:mb-4" style={{ letterSpacing: '0.05em' }}>
-            EVERY STEP, EXPLICIT
+          <h2 className="text-2xl lg:text-4xl font-bold font-mono tracking-wider mb-4 lg:mb-6" style={{ letterSpacing: '0.04em' }}>
+            FOURTEEN LAYERS. ONE OPERATING SYSTEM.
           </h2>
-          <p className="text-sm lg:text-base text-white/60 font-mono leading-relaxed mb-10 lg:mb-12 max-w-3xl">
-            What the AI does. What the human reviews. What model runs it. No black boxes.
-            Every primitive labeled. Every actor named.
+
+          <p className="text-sm lg:text-base text-white/60 font-mono leading-relaxed max-w-3xl mb-10 lg:mb-14">
+            Every scaling SMB has the same operating layers. Each has a recognizable reality, a recognizable tool sprawl, and a recognizable friction. The intelligence and orchestration opportunity is the rightmost column.
           </p>
 
-          <div className="space-y-8 lg:space-y-10">
-            {workflowMap.map((stage) => (
-              <div key={stage.stage}>
-                <div className={`text-[11px] lg:text-xs font-mono font-bold tracking-widest mb-3 lg:mb-4 ${stage.color}`}>
-                  {stage.stage}
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 lg:gap-3">
-                  {stage.steps.map((step) => (
-                    <div key={step.id} className="border border-white/15 hover:border-white/30 transition-colors p-3 lg:p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-[10px] font-mono text-white/40 tracking-widest">{step.id}</span>
-                        <div className="flex gap-1.5">
-                          <span className={`text-[9px] font-mono tracking-widest px-1.5 py-0.5 border ${step.actor === 'HUMAN' ? 'border-orange-400/40 text-orange-400/80' : step.actor === 'HYBRID' ? 'border-yellow-400/40 text-yellow-400/80' : 'border-white/20 text-white/60'}`}>
-                            {step.actor}
-                          </span>
-                          <span className="text-[9px] font-mono tracking-widest px-1.5 py-0.5 border border-white/20 text-white/60">
-                            {step.model}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="text-xs lg:text-sm font-mono text-white">{step.name}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
+          {/* Desktop table */}
+          <div className="hidden lg:block border border-white/10 overflow-hidden">
+            <table className="w-full font-mono text-xs">
+              <thead className="bg-white/[0.03]">
+                <tr className="text-left text-white/40 tracking-widest text-[10px]">
+                  <th className="px-4 py-4 font-normal w-[60px]">#</th>
+                  <th className="px-4 py-4 font-normal w-[18%]">OPERATING LAYER</th>
+                  <th className="px-4 py-4 font-normal w-[22%]">TYPICAL SMB REALITY</th>
+                  <th className="px-4 py-4 font-normal w-[18%]">COMMON TOOL SPRAWL</th>
+                  <th className="px-4 py-4 font-normal w-[22%]">TYPICAL FRICTIONS</th>
+                  <th className="px-4 py-4 font-normal">BOVERSE OPPORTUNITY</th>
+                </tr>
+              </thead>
+              <tbody>
+                {operatingStack.map((row, i) => (
+                  <tr
+                    key={row.n}
+                    className={`border-t border-white/10 ${i % 2 === 0 ? 'bg-transparent' : 'bg-white/[0.015]'}`}
+                  >
+                    <td className="px-4 py-5 align-top text-white/40 tabular-nums">{row.n}</td>
+                    <td className="px-4 py-5 align-top text-white font-bold tracking-wide">{row.layer}</td>
+                    <td className="px-4 py-5 align-top text-white/70 leading-relaxed">{row.reality}</td>
+                    <td className="px-4 py-5 align-top text-white/50 leading-relaxed">{row.sprawl}</td>
+                    <td className="px-4 py-5 align-top text-white/60 leading-relaxed">{row.friction}</td>
+                    <td className="px-4 py-5 align-top text-white/80 leading-relaxed border-l border-white/10">{row.opportunity}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        </section>
 
-        {/* RAG library */}
-        <section className="border-t border-white/10 bg-white/[0.02]">
-          <div className="container mx-auto px-6 lg:px-16 py-16 lg:py-24 max-w-6xl">
-            <div className="flex items-center gap-2 mb-6 opacity-60">
-              <div className="w-8 h-px bg-white"></div>
-              <span className="text-white text-[10px] font-mono tracking-wider">KNOWLEDGE LIBRARY</span>
-              <div className="flex-1 h-px bg-white"></div>
-            </div>
-
-            <h2 className="text-2xl lg:text-4xl font-mono font-bold tracking-wider mb-3 lg:mb-4" style={{ letterSpacing: '0.05em' }}>
-              TRIBAL KNOWLEDGE, MADE EXPLICIT
-            </h2>
-            <p className="text-sm lg:text-base text-white/60 font-mono leading-relaxed mb-10 lg:mb-12 max-w-3xl">
-              The rules that lived in the estimating manager&apos;s head. Now in the system.
-              Three statuses: provided by the client, inferred from artifacts, or flagged for capture.
-            </p>
-
-            <div className="border border-white/20">
-              <div className="grid grid-cols-12 gap-3 px-4 py-2 border-b border-white/10 text-[10px] font-mono text-white/40 tracking-widest bg-white/[0.02]">
-                <div className="col-span-6 md:col-span-7">ASSET</div>
-                <div className="col-span-3 md:col-span-2">TYPE</div>
-                <div className="col-span-3">STATUS</div>
-              </div>
-              {ragAssets.map((asset) => (
-                <div key={asset.name} className="grid grid-cols-12 gap-3 px-4 py-3 border-b border-white/5 last:border-b-0 hover:bg-white/[0.02] transition-colors items-center">
-                  <div className="col-span-6 md:col-span-7 text-xs lg:text-sm font-mono text-white">{asset.name}</div>
-                  <div className="col-span-3 md:col-span-2 text-[10px] font-mono text-white/50 tracking-widest">{asset.type}</div>
-                  <div className="col-span-3">
-                    <StatusBadge status={asset.status} />
+          {/* Mobile card list */}
+          <div className="lg:hidden space-y-4">
+            {operatingStack.map((row) => (
+              <article key={row.n} className="border border-white/10 p-5 font-mono text-xs">
+                <div className="flex items-baseline gap-3 mb-3 pb-3 border-b border-white/10">
+                  <span className="text-white/40 tabular-nums text-[10px] tracking-widest">{row.n}</span>
+                  <h3 className="text-white font-bold tracking-wide text-sm leading-tight">{row.layer}</h3>
+                </div>
+                <dl className="space-y-3">
+                  <div>
+                    <dt className="text-white/40 tracking-widest text-[9px] mb-1">REALITY</dt>
+                    <dd className="text-white/70 leading-relaxed">{row.reality}</dd>
                   </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Synthetic data */}
-        <section className="container mx-auto px-6 lg:px-16 py-16 lg:py-24 max-w-6xl">
-          <div className="flex items-center gap-2 mb-6 opacity-60">
-            <div className="w-8 h-px bg-white"></div>
-            <span className="text-white text-[10px] font-mono tracking-wider">SIMULATION PACK · 10 ROWS</span>
-            <div className="flex-1 h-px bg-white"></div>
-          </div>
-
-          <h2 className="text-2xl lg:text-4xl font-mono font-bold tracking-wider mb-3 lg:mb-4" style={{ letterSpacing: '0.05em' }}>
-            7 HAPPY · 3 EDGE CASES
-          </h2>
-          <p className="text-sm lg:text-base text-white/60 font-mono leading-relaxed mb-10 lg:mb-12 max-w-3xl">
-            Realistic synthetic data that looks like a real week of Apex. Three rows are deliberately
-            broken: missing fields, duplicates, ambiguous scopes. The workflow handles each gracefully
-            before a single real quote touches the system.
-          </p>
-
-          <div className="border border-white/20 overflow-x-auto">
-            <div className="grid grid-cols-12 gap-3 px-4 py-2 border-b border-white/10 text-[10px] font-mono text-white/40 tracking-widest bg-white/[0.02] min-w-[700px]">
-              <div className="col-span-3">INQUIRY ID</div>
-              <div className="col-span-3">CLIENT</div>
-              <div className="col-span-4">JOB</div>
-              <div className="col-span-2">EDGE CASE</div>
-            </div>
-            {syntheticRows.map((row) => (
-              <div key={row.id} className={`grid grid-cols-12 gap-3 px-4 py-3 border-b border-white/5 last:border-b-0 min-w-[700px] items-center ${row.flag ? 'bg-orange-500/[0.04]' : ''}`}>
-                <div className="col-span-3 text-xs font-mono text-white/70">{row.id}</div>
-                <div className="col-span-3 text-xs font-mono text-white">{row.client}</div>
-                <div className="col-span-4 text-xs font-mono text-white/60">{row.job}</div>
-                <div className="col-span-2">
-                  {row.flag && (
-                    <span className="text-[9px] font-mono tracking-widest px-1.5 py-0.5 border border-orange-400/40 text-orange-400/80">
-                      {row.flag}
-                    </span>
-                  )}
-                </div>
-              </div>
+                  <div>
+                    <dt className="text-white/40 tracking-widest text-[9px] mb-1">TOOL SPRAWL</dt>
+                    <dd className="text-white/50 leading-relaxed">{row.sprawl}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-white/40 tracking-widest text-[9px] mb-1">FRICTION</dt>
+                    <dd className="text-white/60 leading-relaxed">{row.friction}</dd>
+                  </div>
+                  <div className="pt-3 border-t border-white/10">
+                    <dt className="text-white/40 tracking-widest text-[9px] mb-1">BOVERSE OPPORTUNITY</dt>
+                    <dd className="text-white leading-relaxed">{row.opportunity}</dd>
+                  </div>
+                </dl>
+              </article>
             ))}
           </div>
         </section>
 
-        {/* CTA */}
-        <section className="container mx-auto px-6 lg:px-16 py-20 lg:py-28 max-w-5xl text-center">
-          <p className="text-[10px] lg:text-[11px] font-mono text-white/40 tracking-widest mb-4">
-            YOUR WORKFLOW NEXT
-          </p>
-          <h2 className="text-2xl lg:text-4xl font-mono font-bold tracking-wider leading-tight mb-8 lg:mb-10" style={{ letterSpacing: '0.05em' }}>
-            EVERY BUSINESS HAS A WORKFLOW.
-            <span className="block opacity-80">YOURS IS A CONFIGURATION AWAY.</span>
+        {/* Bridge */}
+        <section className="container mx-auto px-6 lg:px-16 py-8 lg:py-12 max-w-5xl border-y border-white/10">
+          <div className="grid md:grid-cols-[auto_1fr] gap-6 lg:gap-12 items-start">
+            <div className="text-5xl lg:text-7xl font-mono font-bold text-white/20 tabular-nums leading-none">↓</div>
+            <p className="text-sm lg:text-lg text-white/70 font-mono leading-relaxed">
+              The stack is universal. But the layers don&apos;t break all at once. They break in a predictable order as revenue grows — and each break is a moment of opportunity for orchestration leverage.
+            </p>
+          </div>
+        </section>
+
+        {/* TABLE 02 — Scale Stages */}
+        <section className="container mx-auto px-6 lg:px-16 py-16 lg:py-24 max-w-7xl">
+          <div className="flex items-center gap-2 mb-4 opacity-60">
+            <div className="w-8 h-px bg-white"></div>
+            <span className="text-white text-[10px] font-mono tracking-wider">02 / WHAT BREAKS AS SMBs SCALE</span>
+            <div className="flex-1 h-px bg-white"></div>
+          </div>
+
+          <h2 className="text-2xl lg:text-4xl font-bold font-mono tracking-wider mb-4 lg:mb-6" style={{ letterSpacing: '0.04em' }}>
+            REVENUE STAGES MAP TO BROKEN LAYERS.
           </h2>
 
-          <div className="flex flex-col sm:flex-row gap-3 lg:gap-4 justify-center">
+          <p className="text-sm lg:text-base text-white/60 font-mono leading-relaxed max-w-3xl mb-10 lg:mb-14">
+            Operational maturity is the new ladder. Capacity breaks first. Then quality. Then communication. Then visibility. Then memory. Then strategic coordination. The path is the same for almost every scaling SMB — only the timing varies.
+          </p>
+
+          {/* Desktop table */}
+          <div className="hidden lg:block border border-white/10 overflow-hidden">
+            <table className="w-full font-mono text-sm">
+              <thead className="bg-white/[0.03]">
+                <tr className="text-left text-white/40 tracking-widest text-[10px]">
+                  <th className="px-6 py-4 font-normal w-[15%]">REVENUE STAGE</th>
+                  <th className="px-6 py-4 font-normal w-[35%]">TYPICAL SMB SYMPTOMS</th>
+                  <th className="px-6 py-4 font-normal w-[25%]">CORE CONSTRAINT</th>
+                  <th className="px-6 py-4 font-normal">WHAT USUALLY BREAKS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {scaleStages.map((row, i) => (
+                  <tr
+                    key={row.stage}
+                    className={`border-t border-white/10 ${i % 2 === 0 ? 'bg-transparent' : 'bg-white/[0.015]'}`}
+                  >
+                    <td className="px-6 py-6 align-top text-white font-bold text-base tabular-nums">{row.stage}</td>
+                    <td className="px-6 py-6 align-top text-white/70 leading-relaxed">{row.symptoms}</td>
+                    <td className="px-6 py-6 align-top text-white/80 leading-relaxed">{row.constraint}</td>
+                    <td className="px-6 py-6 align-top text-white leading-relaxed border-l border-white/10">{row.breaks}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile card list */}
+          <div className="lg:hidden space-y-4">
+            {scaleStages.map((row) => (
+              <article key={row.stage} className="border border-white/10 p-5 font-mono text-xs">
+                <div className="mb-4 pb-3 border-b border-white/10">
+                  <div className="text-white/40 tracking-widest text-[9px] mb-1">REVENUE STAGE</div>
+                  <h3 className="text-white font-bold text-lg tabular-nums">{row.stage}</h3>
+                </div>
+                <dl className="space-y-3">
+                  <div>
+                    <dt className="text-white/40 tracking-widest text-[9px] mb-1">SYMPTOMS</dt>
+                    <dd className="text-white/70 leading-relaxed">{row.symptoms}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-white/40 tracking-widest text-[9px] mb-1">CORE CONSTRAINT</dt>
+                    <dd className="text-white/80 leading-relaxed">{row.constraint}</dd>
+                  </div>
+                  <div className="pt-3 border-t border-white/10">
+                    <dt className="text-white/40 tracking-widest text-[9px] mb-1">WHAT USUALLY BREAKS</dt>
+                    <dd className="text-white leading-relaxed">{row.breaks}</dd>
+                  </div>
+                </dl>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        {/* Thesis closer */}
+        <section className="container mx-auto px-6 lg:px-16 py-16 lg:py-24 max-w-5xl border-t border-white/10">
+          <div className="flex items-center gap-2 mb-4 opacity-60">
+            <div className="w-8 h-px bg-white"></div>
+            <span className="text-white text-[10px] font-mono tracking-wider">03 / THESIS</span>
+            <div className="flex-1 h-px bg-white"></div>
+          </div>
+
+          <h2 className="text-3xl lg:text-5xl font-bold font-mono tracking-wider mb-6 lg:mb-8 leading-tight" style={{ letterSpacing: '0.04em' }}>
+            BOVERSE IS AN OPERATIONAL MATURITY
+            <span className="block opacity-80 mt-1 lg:mt-2">AND ORCHESTRATION PLATFORM.</span>
+            <span className="block opacity-60 mt-1 lg:mt-2">NOT A BAG OF AI FEATURES.</span>
+          </h2>
+
+          <div className="grid md:grid-cols-2 gap-6 lg:gap-12 mb-10 lg:mb-12">
+            <p className="text-sm lg:text-base text-white/70 font-mono leading-relaxed">
+              Rows are recognizable business realities. Columns are operational pain. The rightmost column is where intelligence and orchestration infrastructure create leverage.
+            </p>
+            <p className="text-sm lg:text-base text-white/70 font-mono leading-relaxed">
+              We turn fragmented tribal operations into a coherent, observable, orchestrated system — without forcing the SMB to rebuild their tool stack.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3 lg:gap-4">
             <Link
               href="/contact"
-              className="relative px-6 lg:px-8 py-2.5 lg:py-3 bg-white text-black font-mono text-xs lg:text-sm border border-white hover:bg-transparent hover:text-white transition-all duration-200 tracking-widest"
+              className="inline-flex items-center justify-center px-6 lg:px-8 py-3 lg:py-4 border-2 border-white bg-white text-black font-mono text-xs lg:text-sm tracking-widest hover:bg-black hover:text-white focus-visible:bg-black focus-visible:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black transition-all duration-200"
             >
-              BUILD WORKFLOW
+              MAP YOUR OPERATING STACK →
             </Link>
             <Link
               href="/process"
-              className="relative px-6 lg:px-8 py-2.5 lg:py-3 bg-transparent border border-white text-white font-mono text-xs lg:text-sm hover:bg-white hover:text-black transition-all duration-200 tracking-widest"
+              className="inline-flex items-center justify-center px-6 lg:px-8 py-3 lg:py-4 border-2 border-white/30 text-white font-mono text-xs lg:text-sm tracking-widest hover:border-white focus-visible:border-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black transition-all duration-200"
             >
-              ← THE PROCESS
+              SEE THE PROCESS
             </Link>
           </div>
         </section>
