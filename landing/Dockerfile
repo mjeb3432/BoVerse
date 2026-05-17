@@ -24,6 +24,9 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
+# Bind to all interfaces so Render's edge proxy can reach the container.
+# Next.js standalone defaults to 127.0.0.1 in some versions — that's a 502.
+ENV HOSTNAME=0.0.0.0
 
 # Non-root user for safety.
 RUN addgroup --system --gid 1001 nodejs
