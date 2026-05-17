@@ -92,7 +92,11 @@ export const SimulateOutputSchema = z.object({
   // slightly short-or-long response is still usable. The downstream summary
   // counts `total_rows - 3` for happy and `3` for edge as defaults, so
   // anything in the 8-12 range keeps that math sensible.
-  rows: z.array(SyntheticRowSchema).min(7).max(12),
+  // Range, not exact 10. Gemini reliably hits 10 but rate-limits at 5/min;
+  // Groq gpt-oss-120b returns 2-5 even with explicit count instructions.
+  // Stage 03 tries Gemini first, falls back to Groq — both have to validate
+  // against the same shape, so the floor is set to what Groq can deliver.
+  rows: z.array(SyntheticRowSchema).min(2).max(15),
 });
 export type SimulateOutput = z.infer<typeof SimulateOutputSchema>;
 

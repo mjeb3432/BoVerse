@@ -3,7 +3,7 @@
 
 import { NextResponse } from 'next/server';
 import { generateObject } from 'ai';
-import { bulkModel, ensureLLMConfigured } from '@/lib/llm';
+import { bulkModel, fastModel, HAS_GOOGLE_KEY, HAS_GROQ_KEY, ensureLLMConfigured } from '@/lib/llm';
 import { ensurePostgresConfigured, query } from '@/lib/postgres';
 import {
   ClarifyAnswersSchema,
@@ -49,31 +49,63 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'invalid stage inputs' }, { status: 400 });
   }
 
-  try {
-    const { object } = await generateObject({
-      // bulkModel prefers Gemini for this stage — gpt-oss-120b under strict
-      // schema regularly underproduces array items. See lib/llm.ts.
-      model: bulkModel(),
-      schema: SimulateOutputSchema,
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        {
-          role: 'user',
-          content: `## Inferred process\n\n\`\`\`json\n${JSON.stringify(ingest.data, null, 2)}\n\`\`\`\n\n## Clarification\n\nQuestions:\n\`\`\`json\n${JSON.stringify(clarify.data, null, 2)}\n\`\`\`\n\nAnswers:\n\`\`\`json\n${JSON.stringify(answers.data, null, 2)}\n\`\`\`\n\nProduce the input schema and 10 synthetic rows (7 happy + 3 edge cases).`,
-        },
-      ],
-    });
+  const userMsg = `## Inferred process\n\n\`\`\`json\n${JSON.stringify(ingest.data, null, 2)}\n\`\`\`\n\n## Clarification\n\nQuestions:\n\`\`\`json\n${JSON.stringify(clarify.data, null, 2)}\n\`\`\`\n\nAnswers:\n\`\`\`json\n${JSON.stringify(answers.data, null, 2)}\n\`\`\`\n\nProduce the input schema and 10 synthetic rows (7 happy + 3 edge cases).`;
 
-    await saveStageOutput(sessionId, 'simulate_output', object, 'generate');
-    return NextResponse.json({ output: object });
-  } catch (err) {
-    // Always return JSON — the client uses .json() and will crash on HTML
-    // error pages (e.g. Vercel function timeout returns an HTML response).
-    return NextResponse.json(
-      { error: 'llm_error', message: (err as Error).message },
-      { status: 500 }
-    );
+  // Provider fallback chain. Gemini is best at array generation (hits the
+  // 10-row target reliably) but rate-limits at 5 req/min on the free tier.
+  // gpt-oss-120b never rate-limits but only emits 2-5 rows. Try Gemini
+  // first; on quota/timeout, fall back to Groq with whatever it returns.
+  // The schema accepts 2-15 rows so either provider's output validates.
+  const attempts: Array<{ name: string; run: () => Promise<{ object: unknown }> }> = [];
+  if (HAS_GOOGLE_KEY) {
+    attempts.push({
+      name: 'gemini-2.5-flash',
+      run: () => generateObject({
+        model: bulkModel(),
+        schema: SimulateOutputSchema,
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: userMsg },
+        ],
+      }),
+    });
   }
+  if (HAS_GROQ_KEY) {
+    attempts.push({
+      name: 'groq-gpt-oss-120b',
+      run: () => generateObject({
+        model: fastModel(),
+        schema: SimulateOutputSchema,
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: userMsg },
+        ],
+      }),
+    });
+  }
+
+  const errors: Array<{ provider: string; message: string }> = [];
+  for (const attempt of attempts) {
+    try {
+      const { object } = await attempt.run();
+      await saveStageOutput(sessionId, 'simulate_output', object, 'generate');
+      return NextResponse.json({ output: object, provider: attempt.name });
+    } catch (err) {
+      errors.push({ provider: attempt.name, message: (err as Error).message });
+      // Keep going — try the next provider in the chain.
+    }
+  }
+
+  // Always return JSON — the client uses .json() and will crash on HTML
+  // error pages (e.g. Vercel function timeout returns an HTML response).
+  return NextResponse.json(
+    {
+      error: 'llm_error',
+      message: `All providers failed for Stage 03. ${errors.map((e) => `[${e.provider}] ${e.message}`).join(' | ')}`,
+      attempts: errors,
+    },
+    { status: 500 }
+  );
 }
 
 async function saveStageOutput(
