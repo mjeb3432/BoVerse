@@ -3,7 +3,7 @@
 
 import { NextResponse } from 'next/server';
 import { generateObject } from 'ai';
-import { ensureLLMConfigured, fastModel } from '@/lib/llm';
+import { bulkModel, ensureLLMConfigured } from '@/lib/llm';
 import { ensurePostgresConfigured, query } from '@/lib/postgres';
 import {
   ClarifyAnswersSchema,
@@ -51,7 +51,9 @@ export async function POST(req: Request) {
 
   try {
     const { object } = await generateObject({
-      model: fastModel(),
+      // bulkModel prefers Gemini for this stage — gpt-oss-120b under strict
+      // schema regularly underproduces array items. See lib/llm.ts.
+      model: bulkModel(),
       schema: SimulateOutputSchema,
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },

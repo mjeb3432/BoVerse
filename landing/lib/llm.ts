@@ -52,6 +52,23 @@ export const fastModel = () => {
 // 2.5-flash (verified on the "Electrical Services Quoting Process" run).
 export const reasoningModel = () => fastModel();
 
+// BULK-ARRAY tasks (Stage 03 SIMULATE — 10 synthetic rows, Stage 04's
+// 20-step list works fine but the row generator is the stress case).
+//
+// Why a separate route: gpt-oss-120b under OpenAI-strict json_schema
+// reliably returns the SHAPE but counts poorly — it emitted 2 of 10
+// requested rows on live runs even with explicit count instructions
+// in the system prompt. Gemini 2.5-flash hits the requested length
+// almost every time (verified end-to-end with a 7+3 row generation).
+//
+// Routing: prefer Gemini if available, fall back to Groq gpt-oss-120b
+// (which will work but may underproduce).
+export const bulkModel = () => {
+  if (HAS_GOOGLE_KEY) return google('gemini-2.5-flash');
+  if (HAS_GROQ_KEY) return groq('openai/gpt-oss-120b');
+  return google('gemini-2.5-flash'); // unreachable if ensureLLMConfigured passed
+};
+
 // Stage 01 multimodal ingest. Gemini is the only free provider that reads
 // PDFs and images inline. Returns null if Gemini key is missing — callers
 // must then extract text upstream (pdf-parse / image OCR) and route through
