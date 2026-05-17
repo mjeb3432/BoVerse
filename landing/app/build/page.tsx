@@ -54,6 +54,46 @@ const stages: { id: SessionStage; n: string; label: string; desc: string }[] = [
 
 const stageIndex = (s: SessionStage) => stages.findIndex((x) => x.id === s);
 
+// Vercel's serverless ceiling on Hobby is 60s. When a function exceeds it,
+// Vercel returns an HTML error page that begins with "An error occurred…".
+// The default `await r.json()` then throws the unhelpful
+// "Unexpected token 'A', \"An error o\". is not valid JSON". This helper
+// inspects Content-Type first so the user sees actionable text.
+async function safeJson(
+  r: Response,
+  stageLabel: string
+): Promise<{ ok: true; data: unknown } | { ok: false; message: string }> {
+  const ct = r.headers.get('content-type') ?? '';
+  if (!ct.includes('json')) {
+    const body = await r.text().catch(() => '');
+    const snippet = body.slice(0, 160).trim();
+    if (r.status === 504 || r.status === 408 || /timed? ?out/i.test(snippet)) {
+      return {
+        ok: false,
+        message: `${stageLabel} exceeded the 60s function ceiling on Vercel. The model was probably overloaded — try again, often the second pass goes through. (HTTP ${r.status})`,
+      };
+    }
+    if (r.status >= 500) {
+      return {
+        ok: false,
+        message: `${stageLabel} crashed on the server (HTTP ${r.status}). ${snippet ? `Server said: ${snippet.slice(0, 100)}` : 'Try again or RESET to start over.'}`,
+      };
+    }
+    return {
+      ok: false,
+      message: `${stageLabel} returned an unexpected response (HTTP ${r.status}, ${ct || 'no content-type'}).`,
+    };
+  }
+  try {
+    return { ok: true, data: await r.json() };
+  } catch {
+    return {
+      ok: false,
+      message: `${stageLabel} returned malformed JSON. Try again or RESET.`,
+    };
+  }
+}
+
 export default function BuildPage() {
   const [state, setState] = useState<LocalState>({
     session_id: null,
@@ -107,7 +147,9 @@ export default function BuildPage() {
   const startSession = async (): Promise<string> => {
     if (state.session_id) return state.session_id;
     const r = await fetch('/api/build/session', { method: 'POST' });
-    const data = await r.json();
+    const parsed = await safeJson(r, 'Session');
+    if (!parsed.ok) throw new Error(parsed.message);
+    const data = parsed.data as { id: string };
     setState((s) => ({ ...s, session_id: data.id, stage: 'ingest' }));
     return data.id;
   };
@@ -121,9 +163,14 @@ export default function BuildPage() {
       fd.append('session_id', sid);
       for (const f of files) fd.append('files', f);
       const r = await fetch('/api/build/01-ingest', { method: 'POST', body: fd });
-      const data = await r.json();
+      const parsed = await safeJson(r, 'Stage 01 (INGEST)');
+      if (!parsed.ok) {
+        setError(parsed.message);
+        return;
+      }
+      const data = parsed.data as { error?: string; message?: string; output?: IngestOutput; mock?: IngestOutput };
       if (data.error === 'llm_not_configured') {
-        setError(data.message);
+        setError(data.message ?? 'LLM not configured');
         setState((s) => ({
           ...s,
           stage: 'clarify',
@@ -157,7 +204,12 @@ export default function BuildPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session_id: state.session_id, ingest_output: state.ingest_output }),
       });
-      const data = await r.json();
+      const parsed = await safeJson(r, 'Stage 02 (CLARIFY)');
+      if (!parsed.ok) {
+        setError(parsed.message);
+        return;
+      }
+      const data = parsed.data as { error?: string; message?: string; output?: ClarifyOutput };
       if (data.error || !data.output) {
         setError(data.message ?? data.error ?? 'Clarify failed: no output returned.');
         return;
@@ -195,7 +247,12 @@ export default function BuildPage() {
           clarify_answers: state.clarify_answers,
         }),
       });
-      const data = await r.json();
+      const parsed = await safeJson(r, 'Stage 03 (SIMULATE)');
+      if (!parsed.ok) {
+        setError(parsed.message);
+        return;
+      }
+      const data = parsed.data as { error?: string; message?: string; output?: SimulateOutput };
       if (data.error || !data.output) {
         // CRITICAL: do NOT advance stage on error — otherwise StageGenerate
         // renders nothing (its render gate is `simulate_output && ...`) and
@@ -226,7 +283,12 @@ export default function BuildPage() {
           simulate_output: state.simulate_output,
         }),
       });
-      const data = await r.json();
+      const parsed = await safeJson(r, 'Stage 04 (GENERATE)');
+      if (!parsed.ok) {
+        setError(parsed.message);
+        return;
+      }
+      const data = parsed.data as { error?: string; message?: string; output?: GenerateOutput };
       if (data.error || !data.output) {
         setError(data.message ?? data.error ?? 'Generate failed: no output returned.');
         return;
