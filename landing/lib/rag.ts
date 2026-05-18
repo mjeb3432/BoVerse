@@ -97,6 +97,135 @@ export async function upsertRagAssets(
   return out;
 }
 
+// ─── graph edges (vector graph) ─────────────────────────────────────────
+
+export type EdgeType = 'used_by_step' | 'co_referenced' | 'semantic' | 'manual';
+
+export interface EdgeInput {
+  source_asset_id: string;
+  target_asset_id: string;
+  edge_type: EdgeType;
+  weight?: number;
+  metadata?: Record<string, unknown>;
+}
+
+// Upsert one edge. ON CONFLICT (session_id, source, target, edge_type)
+// updates the weight + metadata so re-running Stage 04 refreshes the graph
+// instead of duplicating rows.
+export async function upsertRagEdge(
+  sessionId: string,
+  edge: EdgeInput
+): Promise<string | null> {
+  if (sessionId.startsWith('local-')) return null;
+  const result = await query<{ id: string }>(
+    `insert into rag_edges (session_id, source_asset_id, target_asset_id, edge_type, weight, metadata)
+     values ($1, $2, $3, $4, $5, $6::jsonb)
+     on conflict (session_id, source_asset_id, target_asset_id, edge_type)
+     do update set weight = excluded.weight, metadata = excluded.metadata
+     returning id`,
+    [
+      sessionId,
+      edge.source_asset_id,
+      edge.target_asset_id,
+      edge.edge_type,
+      edge.weight ?? 1.0,
+      JSON.stringify(edge.metadata ?? {}),
+    ]
+  );
+  return result?.rows[0]?.id ?? null;
+}
+
+// Given a workflow's steps and the asset_name → asset_id mapping from
+// upsertRagAssets, materialize the graph: used_by_step edges (asset →
+// asset, with step in metadata — represents the step that uses it) and
+// co_referenced edges (assets that share at least one step). Returns
+// the count of edges written.
+export async function buildGraphFromWorkflow(
+  sessionId: string,
+  steps: Array<{ id: string; rag_assets: string[] | null | undefined }>,
+  assetNameToId: Map<string, string>
+): Promise<{ used_by_step: number; co_referenced: number }> {
+  if (sessionId.startsWith('local-')) return { used_by_step: 0, co_referenced: 0 };
+
+  let usedByStepCount = 0;
+  let coReferencedCount = 0;
+
+  // For each step, write a used_by_step self-edge per asset (records that
+  // the asset is consumed by this step — stored as a self-loop so the graph
+  // can be traversed from any asset to find its consumers via metadata).
+  for (const step of steps) {
+    const refs = (step.rag_assets ?? []).filter((name) => assetNameToId.has(name));
+    for (const name of refs) {
+      const id = assetNameToId.get(name)!;
+      await upsertRagEdge(sessionId, {
+        source_asset_id: id,
+        target_asset_id: id,
+        edge_type: 'used_by_step',
+        weight: 1.0,
+        metadata: { step_id: step.id },
+      });
+      usedByStepCount++;
+    }
+    // Co-referenced edges: every pair of assets in this step's refs gets a
+    // bidirectional edge (two rows). Weight = 1 / number of refs so a step
+    // with many assets contributes less per-pair to the overall co-ref score.
+    if (refs.length >= 2) {
+      const weight = Math.min(1, 1 / refs.length);
+      for (let i = 0; i < refs.length; i++) {
+        for (let j = 0; j < refs.length; j++) {
+          if (i === j) continue;
+          await upsertRagEdge(sessionId, {
+            source_asset_id: assetNameToId.get(refs[i])!,
+            target_asset_id: assetNameToId.get(refs[j])!,
+            edge_type: 'co_referenced',
+            weight,
+            metadata: { via_step: step.id },
+          });
+          coReferencedCount++;
+        }
+      }
+    }
+  }
+
+  return { used_by_step: usedByStepCount, co_referenced: coReferencedCount };
+}
+
+// Semantic edges: for every pair of session assets with embedding vectors,
+// compute cosine similarity. If above the threshold, write a semantic edge.
+// Cheap-ish — does the cross-join inside Postgres using the <=> operator.
+export async function buildSemanticEdges(
+  sessionId: string,
+  similarityThreshold = 0.6
+): Promise<number> {
+  if (sessionId.startsWith('local-')) return 0;
+
+  // SELECT every pair of (this session) assets whose cosine similarity is
+  // above the threshold. cosine_similarity = 1 - cosine_distance, and
+  // <=> returns cosine distance in pgvector.
+  const r = await query<{ source_id: string; target_id: string; similarity: number }>(
+    `select a1.id as source_id, a2.id as target_id,
+            1 - (a1.embedding <=> a2.embedding) as similarity
+       from rag_assets a1
+       join rag_assets a2 on a1.session_id = a2.session_id and a1.id <> a2.id
+      where a1.session_id = $1
+        and a1.embedding is not null
+        and a2.embedding is not null
+        and 1 - (a1.embedding <=> a2.embedding) >= $2`,
+    [sessionId, similarityThreshold]
+  );
+
+  for (const row of r?.rows ?? []) {
+    await upsertRagEdge(sessionId, {
+      source_asset_id: row.source_id,
+      target_asset_id: row.target_id,
+      edge_type: 'semantic',
+      weight: row.similarity,
+      metadata: { method: 'cosine' },
+    });
+  }
+  return r?.rows.length ?? 0;
+}
+
 // ─── retrieve ────────────────────────────────────────────────────────────
 
 // Similarity search scoped to a session. Returns the top-k most similar

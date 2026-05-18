@@ -10,6 +10,7 @@
 // Real per-row execution is what the user picked in D4 (vs simulated trace).
 
 import { generateText } from 'ai';
+import { renderAgentSwarmPromptFromSession } from '@/lib/agent-swarm-prompt';
 import { ensureLLMConfigured, fastModel } from '@/lib/llm';
 import { ensurePostgresConfigured, query } from '@/lib/postgres';
 import { searchRagAssets, type RagAssetHit } from '@/lib/rag';
@@ -36,6 +37,7 @@ export async function POST(req: Request) {
   }
 
   const spec = renderMarkdownSpec(generate.data, simulate.data);
+  const swarmPrompt = renderAgentSwarmPromptFromSession(generate.data, simulate.data);
 
   // SSE stream so the UI can show live per-row progress.
   const stream = new ReadableStream({
@@ -44,7 +46,7 @@ export async function POST(req: Request) {
       const send = (event: string, data: unknown) =>
         controller.enqueue(enc.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
 
-      send('spec', { workflow_spec_markdown: spec });
+      send('spec', { workflow_spec_markdown: spec, agent_swarm_markdown: swarmPrompt });
 
       const llmAvailable = ensureLLMConfigured().ok;
       const totalSteps = generate.data.steps.length;
@@ -314,6 +316,9 @@ function renderMarkdownSpec(generate: GenerateOutput, simulate: SimulateOutput):
 
   return lines.join('\n');
 }
+
+// Agent-swarm prompt markdown rendering lives in lib/agent-swarm-prompt.ts
+// so the /sessions detail endpoint can re-render it for past sessions.
 
 // ─── Persistence ─────────────────────────────────────────────────────────
 

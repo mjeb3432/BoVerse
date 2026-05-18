@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 const navItems = [
   { href: '/process', label: 'PROCESS' },
   { href: '/example', label: 'EXAMPLE' },
+  { href: '/sessions', label: 'SESSIONS' },
 ];
 
 export default function SiteHeader() {

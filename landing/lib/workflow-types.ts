@@ -88,21 +88,24 @@ export const SyntheticRowSchema = z.object({
   data: z.unknown(),
 });
 
+// Two variants of the simulate schema so we can use the full provider chain:
+//
+//   SimulateOutputSchema       — strict (.min(2).max(15)) for Gemini + Groq.
+//   SimulateOutputSchemaLoose  — no array bounds, for Cerebras (which rejects
+//                                minItems/maxItems in strict json_schema).
+//
+// Stage 03's route validates the LOOSE result count in code afterwards, so
+// the count guarantee survives the provider swap.
 export const SimulateOutputSchema = z.object({
   schema: z.array(SchemaFieldSchema),
-  // We ask for exactly 10 rows (7 happy + 3 edge) in the prompt, but LLMs
-  // rarely hit an exact count under structured-output pressure. gpt-oss-120b
-  // returned 3 rows on the first live attempt. Accept a band around 10 so a
-  // slightly short-or-long response is still usable. The downstream summary
-  // counts `total_rows - 3` for happy and `3` for edge as defaults, so
-  // anything in the 8-12 range keeps that math sensible.
-  // Range, not exact 10. Gemini reliably hits 10 but rate-limits at 5/min;
-  // Groq gpt-oss-120b returns 2-5 even with explicit count instructions.
-  // Stage 03 tries Gemini first, falls back to Groq — both have to validate
-  // against the same shape, so the floor is set to what Groq can deliver.
   rows: z.array(SyntheticRowSchema).min(2).max(15),
 });
 export type SimulateOutput = z.infer<typeof SimulateOutputSchema>;
+
+export const SimulateOutputSchemaLoose = z.object({
+  schema: z.array(SchemaFieldSchema),
+  rows: z.array(SyntheticRowSchema),
+});
 
 // ────────────────────────────────────────────────────────────────────────────
 // Stage 04 — GENERATE

@@ -139,27 +139,47 @@ export async function POST(req: Request) {
 
 // ─── helpers ─────────────────────────────────────────────────────────────
 
-// Persist file metadata + a text preview to Postgres. We do NOT store raw
-// file bytes — Postgres is the wrong place for that. If we later need raw
-// file storage, we'll add S3 / R2 / Fly volumes.
+// Persist file metadata + a text preview to workflow_sessions (back-compat
+// for the existing UI), PLUS the FULL extracted text to session_artifacts
+// (one row per file) so the user can download the original inputs later via
+// the /sessions browse page or the dump scripts.
 async function persistArtifacts(
   sessionId: string,
-  parsed: Array<{ file: File; buf: Buffer; result: { text: string | null; meta: Record<string, unknown> } }>
+  parsed: Array<{ file: File; buf: Buffer; result: { text: string | null; isImage?: boolean; meta: Record<string, unknown> } }>
 ) {
   if (sessionId.startsWith('local-')) return;
   if (!ensurePostgresConfigured().ok) return;
 
+  // Preview blob on workflow_sessions (kept small for fast list queries).
   const uploaded = parsed.map(({ file, result }) => ({
     name: file.name,
     mime_type: file.type,
     size_bytes: file.size,
     extracted_text_preview: result.text?.slice(0, 1000) ?? null,
   }));
-
   await query(
     `update workflow_sessions set uploaded_files = $1 where id = $2`,
     [JSON.stringify(uploaded), sessionId]
   );
+
+  // Full text + multimodal flag on session_artifacts (one row per file).
+  // We don't store raw bytes — text artifacts get extracted_text, images
+  // get extracted_text=null + was_multimodal=true (the multimodal model
+  // read them directly, the bytes weren't kept).
+  for (const { file, result } of parsed) {
+    await query(
+      `insert into session_artifacts (session_id, file_name, mime_type, size_bytes, extracted_text, was_multimodal)
+       values ($1, $2, $3, $4, $5, $6)`,
+      [
+        sessionId,
+        file.name,
+        file.type,
+        file.size,
+        result.text ?? null,
+        Boolean(result.isImage),
+      ]
+    );
+  }
 }
 
 async function saveStageOutput(

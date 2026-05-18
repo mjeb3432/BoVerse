@@ -49,11 +49,14 @@ export async function POST(req: Request) {
     const { object } = await generateObject({
       model: fastModel(),
       schema: ClarifyOutputSchema,
+      // Low temperature for determinism — clarification questions for the
+      // same inferred process should be stable across runs.
+      temperature: 0.2,
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
         {
           role: 'user',
-          content: `Inferred process so far:\n\n\`\`\`json\n${JSON.stringify(ingestOutput.data, null, 2)}\n\`\`\`\n\nGenerate up to 5 targeted clarification questions.`,
+          content: `Inferred process so far:\n\n\`\`\`json\n${JSON.stringify(ingestOutput.data, null, 2)}\n\`\`\`\n\nGenerate up to 5 targeted clarification questions. Cap is 5. If you have fewer real gaps, emit fewer questions rather than padding.`,
         },
       ],
     });

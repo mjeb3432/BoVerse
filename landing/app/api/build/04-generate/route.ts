@@ -6,7 +6,7 @@ import { NextResponse } from 'next/server';
 import { generateObject } from 'ai';
 import { ensureLLMConfigured, reasoningModel } from '@/lib/llm';
 import { ensurePostgresConfigured, query } from '@/lib/postgres';
-import { upsertRagAssets } from '@/lib/rag';
+import { buildGraphFromWorkflow, buildSemanticEdges, upsertRagAssets } from '@/lib/rag';
 import {
   ClarifyAnswersSchema,
   GenerateOutputSchema,
@@ -67,11 +67,15 @@ export async function POST(req: Request) {
     const { object } = await generateObject({
       model: reasoningModel(),
       schema: GenerateOutputSchema,
+      // Low temperature for determinism — the workflow definition for the
+      // same inferred process + clarifications + schema should be stable
+      // across runs. Stage 04 is the deliverable; users compare runs.
+      temperature: 0.2,
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
         {
           role: 'user',
-          content: `## Inferred process\n\n\`\`\`json\n${JSON.stringify(ingest.data, null, 2)}\n\`\`\`\n\n## Clarification answers\n\n\`\`\`json\n${JSON.stringify(answers.data, null, 2)}\n\`\`\`\n\n## Schema + synthetic data\n\n\`\`\`json\n${JSON.stringify(simulate.data, null, 2)}\n\`\`\`\n\nGenerate the full workflow definition.`,
+          content: `## Inferred process\n\n\`\`\`json\n${JSON.stringify(ingest.data, null, 2)}\n\`\`\`\n\n## Clarification answers\n\n\`\`\`json\n${JSON.stringify(answers.data, null, 2)}\n\`\`\`\n\n## Schema + synthetic data\n\n\`\`\`json\n${JSON.stringify(simulate.data, null, 2)}\n\`\`\`\n\nGenerate the full workflow definition. Every step's rag_assets must reference names that appear in the rag_library you also emit — no orphaned references.`,
         },
       ],
     });
@@ -83,6 +87,7 @@ export async function POST(req: Request) {
     // similarity search instead of returning stubs. Best-effort — embedding
     // failures or missing keys don't block returning the generated workflow.
     let ragSeeded: Array<{ id: string | null; asset_name: string }> = [];
+    let graphStats = { used_by_step: 0, co_referenced: 0, semantic: 0 };
     try {
       ragSeeded = await upsertRagAssets(
         sessionId,
@@ -92,16 +97,29 @@ export async function POST(req: Request) {
           description: a.description,
         }))
       );
+
+      // Vector graph: now that every asset has a row in rag_assets, build
+      // the edges (used_by_step + co_referenced from workflow structure,
+      // semantic from cosine similarity if embeddings exist).
+      const assetNameToId = new Map(
+        ragSeeded.filter((x) => x.id !== null).map((x) => [x.asset_name, x.id as string])
+      );
+      const workflowEdges = await buildGraphFromWorkflow(
+        sessionId,
+        object.steps.map((s) => ({ id: s.id, rag_assets: s.rag_assets })),
+        assetNameToId
+      );
+      const semanticEdges = await buildSemanticEdges(sessionId);
+      graphStats = { ...workflowEdges, semantic: semanticEdges };
     } catch (err) {
-      // Log but don't fail Stage 04 — the workflow is still usable, just
-      // without persistent RAG (Stage 05 will fall back to keyword match).
-      console.error('[04-generate] RAG seeding failed:', (err as Error).message);
+      console.error('[04-generate] RAG seeding/graph failed:', (err as Error).message);
     }
 
     return NextResponse.json({
       output: object,
       rag_seeded: ragSeeded.filter((x) => x.id !== null).length,
       rag_total: object.rag_library.length,
+      graph_edges: graphStats,
     });
   } catch (err) {
     return NextResponse.json(

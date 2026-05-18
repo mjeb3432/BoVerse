@@ -1,6 +1,6 @@
 // Postgres connection. Uses node-postgres (pg) with a connection pool.
-// Works with any Postgres: managed (Neon, Render, Supabase) or self-hosted.
-// Connection string lives in DATABASE_URL.
+// Targets Supabase Postgres via the IPv4-compatible transaction pooler
+// (port 6543). Connection string lives in DATABASE_URL.
 //
 // If DATABASE_URL is not set, helper functions return null/skip silently so
 // the rest of the app falls back to sessionStorage-only persistence and the
@@ -18,8 +18,8 @@ export function getPool(): Pool | null {
   if (pool) return pool;
   pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    // Sensible defaults for serverless / Fly.io. Tune up if you see pool
-    // exhaustion errors under load.
+    // Sensible defaults for Vercel serverless functions. The Supabase
+    // pooler multiplexes connections so each lambda only needs a few.
     max: 5,
     idleTimeoutMillis: 30_000,
     connectionTimeoutMillis: 5_000,

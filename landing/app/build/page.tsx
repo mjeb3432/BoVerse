@@ -35,7 +35,7 @@ type LocalState = {
 };
 
 type ExecEvent =
-  | { type: 'spec'; workflow_spec_markdown: string }
+  | { type: 'spec'; workflow_spec_markdown: string; agent_swarm_markdown?: string }
   | { type: 'row_started'; row_id: string; kind: 'happy' | 'edge' }
   | { type: 'step_started'; row_id: string; step_id: string; step_name: string; index: number; total: number }
   | { type: 'step_finished'; row_id: string; step_id: string; status: string; duration_ms: number; output?: unknown; trace_message?: string; error?: string }
@@ -344,16 +344,26 @@ export default function BuildPage() {
     }
   };
 
-  const downloadSpec = () => {
-    const specEvent = state.exec_events.find((e): e is Extract<ExecEvent, { type: 'spec' }> => e.type === 'spec');
-    if (!specEvent) return;
-    const blob = new Blob([specEvent.workflow_spec_markdown], { type: 'text/markdown' });
+  const downloadBlob = (content: string, mime: string, ext: string) => {
+    const blob = new Blob([content], { type: mime });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${(state.generate_output?.workflow_name ?? 'workflow').toLowerCase().replace(/[^a-z0-9]+/g, '-')}.md`;
+    a.download = `${(state.generate_output?.workflow_name ?? 'workflow').toLowerCase().replace(/[^a-z0-9]+/g, '-')}.${ext}`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const downloadSpec = () => {
+    const specEvent = state.exec_events.find((e): e is Extract<ExecEvent, { type: 'spec' }> => e.type === 'spec');
+    if (!specEvent) return;
+    downloadBlob(specEvent.workflow_spec_markdown, 'text/markdown', 'md');
+  };
+
+  const downloadSwarmPrompt = () => {
+    const specEvent = state.exec_events.find((e): e is Extract<ExecEvent, { type: 'spec' }> => e.type === 'spec');
+    if (!specEvent?.agent_swarm_markdown) return;
+    downloadBlob(specEvent.agent_swarm_markdown, 'text/markdown', 'agent-swarm.md');
   };
 
   const downloadDocx = async () => {
@@ -454,11 +464,25 @@ export default function BuildPage() {
           </div>
         )}
 
-        <section className="container mx-auto px-6 lg:px-16 py-12 lg:py-16 max-w-6xl">
-          {(state.stage === 'idle' || state.stage === 'ingest') && (
+        <section className="container mx-auto px-6 lg:px-16 py-12 lg:py-16 max-w-6xl space-y-8 lg:space-y-12">
+          {/*
+            Render every stage that has been reached so the user can scroll
+            back and see what came before. The CURRENT stage is rendered as
+            its full interactive component; prior completed stages are
+            rendered inside a collapsible summary panel.
+          */}
+
+          {/* Stage 01 — INGEST */}
+          {(state.stage === 'idle' || state.stage === 'ingest') ? (
             <StageIngest busy={busy === 'ingest'} onSubmit={runIngest} existing={state.ingest_output} uploaded={state.uploaded_files} />
-          )}
-          {state.stage === 'clarify' && state.ingest_output && (
+          ) : state.ingest_output ? (
+            <CompletedStage n="01" label="INGEST" summary={`${state.ingest_output.inferred_steps.length} inferred steps · ${state.ingest_output.inferred_rules.length} rules · ${state.ingest_output.inferred_knowledge_assets.length} assets`}>
+              <InferencePanel inference={state.ingest_output} />
+            </CompletedStage>
+          ) : null}
+
+          {/* Stage 02 — CLARIFY */}
+          {state.stage === 'clarify' && state.ingest_output ? (
             <StageClarify
               ingest={state.ingest_output}
               clarify={state.clarify_output}
@@ -467,13 +491,31 @@ export default function BuildPage() {
               onGenerate={runClarify}
               onSubmit={submitAnswers}
             />
-          )}
-          {state.stage === 'simulate' && state.clarify_output && (
+          ) : state.clarify_answers && state.clarify_output ? (
+            <CompletedStage n="02" label="CLARIFY" summary={`${state.clarify_output.questions.length} questions · ${state.clarify_answers.answers.length} answers submitted`}>
+              <ClarifyRecap clarify={state.clarify_output} answers={state.clarify_answers} />
+            </CompletedStage>
+          ) : null}
+
+          {/* Stage 03 — SIMULATE */}
+          {state.stage === 'simulate' && state.clarify_output ? (
             <StageSimulate simulate={state.simulate_output} busy={busy === 'simulate'} onGenerate={runSimulate} />
-          )}
-          {state.stage === 'generate' && state.simulate_output && (
+          ) : state.simulate_output ? (
+            <CompletedStage n="03" label="SIMULATE" summary={`${state.simulate_output.schema.length} schema fields · ${state.simulate_output.rows.length} synthetic rows (${state.simulate_output.rows.filter((r) => r.kind === 'happy').length} happy + ${state.simulate_output.rows.filter((r) => r.kind === 'edge').length} edge)`}>
+              <SimulateRecap simulate={state.simulate_output} />
+            </CompletedStage>
+          ) : null}
+
+          {/* Stage 04 — GENERATE */}
+          {state.stage === 'generate' && state.simulate_output ? (
             <StageGenerate generate={state.generate_output} busy={busy === 'generate'} onGenerate={runGenerate} />
-          )}
+          ) : state.generate_output ? (
+            <CompletedStage n="04" label="GENERATE" summary={`${state.generate_output.steps.length} steps · ${state.generate_output.rag_library.length} RAG assets · ${state.generate_output.workflow_name}`}>
+              <GenerateRecap generate={state.generate_output} />
+            </CompletedStage>
+          ) : null}
+
+          {/* Stage 05 — DELIVER (only render when reached) */}
           {(state.stage === 'deliver' || state.stage === 'complete') && state.generate_output && (
             <StageDeliver
               workflow={state.generate_output}
@@ -482,6 +524,7 @@ export default function BuildPage() {
               onRun={runDeliver}
               onDownloadSpec={downloadSpec}
               onDownloadDocx={downloadDocx}
+              onDownloadSwarmPrompt={downloadSwarmPrompt}
             />
           )}
         </section>
@@ -882,6 +925,7 @@ function StageDeliver({
   onRun,
   onDownloadSpec,
   onDownloadDocx,
+  onDownloadSwarmPrompt,
 }: {
   workflow: GenerateOutput;
   events: ExecEvent[];
@@ -889,10 +933,13 @@ function StageDeliver({
   onRun: () => void;
   onDownloadSpec: () => void;
   onDownloadDocx: () => void;
+  onDownloadSwarmPrompt: () => void;
 }) {
   const summary = events.find((e): e is Extract<ExecEvent, { type: 'done' }> => e.type === 'done')?.summary;
   const rowStates = aggregateRowStates(events);
-  const specReady = events.some((e) => e.type === 'spec');
+  const specEvent = events.find((e): e is Extract<ExecEvent, { type: 'spec' }> => e.type === 'spec');
+  const specReady = !!specEvent;
+  const swarmReady = !!specEvent?.agent_swarm_markdown;
 
   return (
     <div className="space-y-8 lg:space-y-10">
@@ -900,7 +947,7 @@ function StageDeliver({
       <div>
         <h2 className="text-2xl lg:text-4xl font-bold font-mono tracking-wider mb-3">SPEC + REAL EXECUTION.</h2>
         <p className="text-sm lg:text-base text-white/60 font-mono leading-relaxed max-w-3xl">
-          Downloads a Markdown spec, then runs the workflow against all 10 synthetic rows in real time. Each step executes, each output flows, each edge case fires.
+          Generates a Markdown spec + an agent-swarm prompt-pack, then runs the workflow against all 10 synthetic rows in real time. Each step executes, each output flows, each edge case fires.
         </p>
       </div>
 
@@ -912,19 +959,28 @@ function StageDeliver({
         >
           {busy ? 'EXECUTING…' : summary ? 'RE-RUN EXECUTION →' : 'RUN EXECUTION →'}
         </button>
+        {swarmReady && (
+          <button
+            onClick={onDownloadSwarmPrompt}
+            className="px-6 lg:px-8 py-3 lg:py-4 border-2 border-orange-300/60 text-orange-200 font-mono text-xs lg:text-sm tracking-widest hover:border-orange-300 hover:bg-orange-300/10 transition-all"
+            title="Drop this into Claude / GPT / any agent swarm and they have everything they need to run this workflow."
+          >
+            AGENT SWARM PROMPT (.md)
+          </button>
+        )}
         {specReady && (
           <>
             <button
               onClick={onDownloadDocx}
               className="px-6 lg:px-8 py-3 lg:py-4 border-2 border-white/30 text-white font-mono text-xs lg:text-sm tracking-widest hover:border-white transition-all"
             >
-              DOWNLOAD WORD DOC (.docx)
+              WORD DOC (.docx)
             </button>
             <button
               onClick={onDownloadSpec}
               className="px-6 lg:px-8 py-3 lg:py-4 border border-white/20 text-white/70 font-mono text-xs lg:text-sm tracking-widest hover:border-white/60 hover:text-white transition-all"
             >
-              MARKDOWN (.md)
+              SPEC (.md)
             </button>
           </>
         )}
@@ -1028,6 +1084,110 @@ function SectionMarker({ n, label }: { n: string; label: string }) {
       <div className="w-8 h-px bg-white"></div>
       <span className="text-white text-[10px] font-mono tracking-wider">{n} / {label}</span>
       <div className="flex-1 h-px bg-white"></div>
+    </div>
+  );
+}
+
+// ─── Completed-stage shell ──────────────────────────────────────────────
+// Renders prior stages as a collapsible card with a one-line summary so
+// the user can scroll back without scrolling through full outputs.
+
+function CompletedStage({
+  n,
+  label,
+  summary,
+  children,
+}: {
+  n: string;
+  label: string;
+  summary: string;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border border-white/10 bg-white/[0.02]">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full px-5 py-3 lg:px-6 lg:py-4 flex items-center gap-4 text-left hover:bg-white/[0.04] transition-colors"
+      >
+        <span className="text-[10px] font-mono tracking-widest text-green-300/80 w-16 shrink-0">✓ {n} · {label}</span>
+        <span className="flex-1 text-xs lg:text-sm font-mono text-white/70 truncate">{summary}</span>
+        <span className="text-[10px] font-mono text-white/40 shrink-0">{open ? 'HIDE' : 'EXPAND'}</span>
+      </button>
+      {open && <div className="border-t border-white/10 p-5 lg:p-6">{children}</div>}
+    </div>
+  );
+}
+
+function ClarifyRecap({ clarify, answers }: { clarify: ClarifyOutput; answers: ClarifyAnswers }) {
+  const answerById = new Map(answers.answers.map((a) => [a.id, a.answer]));
+  return (
+    <ul className="space-y-3 font-mono text-xs lg:text-sm">
+      {clarify.questions.map((q, i) => (
+        <li key={q.id} className="border-l-2 border-white/20 pl-3">
+          <div className="text-white/90 mb-1">Q{i + 1}. {q.question}</div>
+          <div className="text-[10px] text-white/40 mb-1">Gap: {q.gap}</div>
+          <div className="text-white/70"><span className="text-[10px] text-white/40 tracking-widest">ANSWER →</span> {answerById.get(q.id) ?? '—'}</div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function SimulateRecap({ simulate }: { simulate: SimulateOutput }) {
+  return (
+    <div className="space-y-4 font-mono text-xs">
+      <div>
+        <div className="text-[10px] tracking-widest text-white/40 mb-2">SCHEMA · {simulate.schema.length} fields</div>
+        <div className="flex flex-wrap gap-2">
+          {simulate.schema.map((f) => (
+            <span key={f.name} className="border border-white/20 px-2 py-1 text-white/80">
+              <span className="text-white">{f.name}</span>
+              <span className="text-white/40 ml-1">:{f.type}</span>
+            </span>
+          ))}
+        </div>
+      </div>
+      <div>
+        <div className="text-[10px] tracking-widest text-white/40 mb-2">EDGE CASES ({simulate.rows.filter((r) => r.kind === 'edge').length})</div>
+        <ul className="space-y-1.5 text-white/70">
+          {simulate.rows.filter((r) => r.kind === 'edge').map((r) => (
+            <li key={r.row_id}>· <span className="text-white/90">{r.row_id}</span> — {r.edge_case_description ?? 'unspecified'}</li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+function GenerateRecap({ generate }: { generate: GenerateOutput }) {
+  const primitiveCount = generate.steps.reduce<Record<string, number>>((a, s) => ({ ...a, [s.primitive]: (a[s.primitive] ?? 0) + 1 }), {});
+  return (
+    <div className="space-y-4 font-mono text-xs">
+      <div>
+        <div className="text-[10px] tracking-widest text-white/40 mb-1">WORKFLOW</div>
+        <div className="text-white text-sm lg:text-base">{generate.workflow_name}</div>
+        <div className="text-white/60 mt-1">{generate.workflow_description}</div>
+      </div>
+      <div>
+        <div className="text-[10px] tracking-widest text-white/40 mb-2">PRIMITIVES</div>
+        <div className="flex flex-wrap gap-2">
+          {Object.entries(primitiveCount).map(([p, n]) => (
+            <span key={p} className="border border-white/20 px-2 py-1 text-white/80">
+              <span className="text-white">{p}</span>
+              <span className="text-white/40 ml-1">×{n}</span>
+            </span>
+          ))}
+        </div>
+      </div>
+      <div>
+        <div className="text-[10px] tracking-widest text-white/40 mb-2">RAG LIBRARY · {generate.rag_library.length} assets</div>
+        <ul className="space-y-1 text-white/70">
+          {generate.rag_library.map((a) => (
+            <li key={a.asset_name}>· <span className="text-white">{a.asset_name}</span> <span className="text-white/40">({a.asset_type})</span></li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }
