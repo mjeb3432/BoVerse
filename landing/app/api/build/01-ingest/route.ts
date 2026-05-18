@@ -7,12 +7,8 @@ import {
   ensureLLMConfigured,
   fastModel,
 } from '@/lib/llm';
-import {
-  createServerSupabase,
-  ensureSupabaseConfigured,
-  ARTIFACTS_BUCKET,
-} from '@/lib/supabase';
-import { parseFile, ACCEPTED_EXTENSIONS } from '@/lib/file-parsers';
+import { ensurePostgresConfigured, query } from '@/lib/postgres';
+import { parseFile } from '@/lib/file-parsers';
 import {
   IngestOutputSchema,
   type IngestOutput,
@@ -119,58 +115,42 @@ export async function POST(req: Request) {
 
 // ─── helpers ─────────────────────────────────────────────────────────────
 
+// Persist file metadata + a text preview to Postgres. We do NOT store raw
+// file bytes — Postgres is the wrong place for that. If we later need raw
+// file storage, we'll add S3 / R2 / Fly volumes.
 async function persistArtifacts(
   sessionId: string,
-  parsed: Array<{ file: File; buf: Buffer; result: { meta: Record<string, unknown> } }>
+  parsed: Array<{ file: File; buf: Buffer; result: { text: string | null; meta: Record<string, unknown> } }>
 ) {
   if (sessionId.startsWith('local-')) return;
-  const cfg = ensureSupabaseConfigured();
-  if (!cfg.ok) return;
+  if (!ensurePostgresConfigured().ok) return;
 
-  const supabase = createServerSupabase()!;
-  const uploaded: Array<{
-    name: string;
-    mime_type: string;
-    size_bytes: number;
-    storage_path: string;
-  }> = [];
+  const uploaded = parsed.map(({ file, result }) => ({
+    name: file.name,
+    mime_type: file.type,
+    size_bytes: file.size,
+    extracted_text_preview: result.text?.slice(0, 1000) ?? null,
+  }));
 
-  for (const { file, buf } of parsed) {
-    const path = `${sessionId}/${Date.now()}-${file.name}`;
-    const { error } = await supabase.storage
-      .from(ARTIFACTS_BUCKET)
-      .upload(path, buf, { contentType: file.type, upsert: false });
-    if (!error) {
-      uploaded.push({
-        name: file.name,
-        mime_type: file.type,
-        size_bytes: file.size,
-        storage_path: path,
-      });
-    }
-  }
-
-  await supabase
-    .from('workflow_sessions')
-    .update({ uploaded_files: uploaded })
-    .eq('id', sessionId);
+  await query(
+    `update workflow_sessions set uploaded_files = $1 where id = $2`,
+    [JSON.stringify(uploaded), sessionId]
+  );
 }
 
 async function saveStageOutput(
   sessionId: string,
-  column: string,
+  column: 'ingest_output' | 'clarify_output' | 'simulate_output' | 'generate_output' | 'deliver_output',
   output: unknown,
   nextStage: string
 ) {
   if (sessionId.startsWith('local-')) return;
-  const cfg = ensureSupabaseConfigured();
-  if (!cfg.ok) return;
-
-  const supabase = createServerSupabase()!;
-  await supabase
-    .from('workflow_sessions')
-    .update({ [column]: output, current_stage: nextStage })
-    .eq('id', sessionId);
+  if (!ensurePostgresConfigured().ok) return;
+  // Column name is fixed by the type union above — safe to interpolate.
+  await query(
+    `update workflow_sessions set ${column} = $1, current_stage = $2 where id = $3`,
+    [JSON.stringify(output), nextStage, sessionId]
+  );
 }
 
 // Mock used when no LLM key is configured. Lets the UI work end-to-end.

@@ -262,6 +262,38 @@ export default function BuildPage() {
     URL.revokeObjectURL(url);
   };
 
+  const downloadDocx = async () => {
+    if (!state.generate_output || !state.simulate_output) return;
+    const summary = state.exec_events.find(
+      (e): e is Extract<ExecEvent, { type: 'done' }> => e.type === 'done'
+    )?.summary;
+    try {
+      const r = await fetch('/api/build/05-deliver/docx', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          generate_output: state.generate_output,
+          simulate_output: state.simulate_output,
+          execution_summary: summary ?? null,
+        }),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({ message: r.statusText }));
+        setError(err.message ?? `Word doc download failed: ${r.status}`);
+        return;
+      }
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${(state.generate_output.workflow_name ?? 'workflow').toLowerCase().replace(/[^a-z0-9]+/g, '-')}.docx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+
   const currentIdx = state.stage === 'idle' ? -1 : stageIndex(state.stage);
 
   return (
@@ -355,6 +387,7 @@ export default function BuildPage() {
               busy={busy === 'deliver'}
               onRun={runDeliver}
               onDownloadSpec={downloadSpec}
+              onDownloadDocx={downloadDocx}
             />
           )}
         </section>
@@ -754,12 +787,14 @@ function StageDeliver({
   busy,
   onRun,
   onDownloadSpec,
+  onDownloadDocx,
 }: {
   workflow: GenerateOutput;
   events: ExecEvent[];
   busy: boolean;
   onRun: () => void;
   onDownloadSpec: () => void;
+  onDownloadDocx: () => void;
 }) {
   const summary = events.find((e): e is Extract<ExecEvent, { type: 'done' }> => e.type === 'done')?.summary;
   const rowStates = aggregateRowStates(events);
@@ -784,12 +819,20 @@ function StageDeliver({
           {busy ? 'EXECUTING…' : summary ? 'RE-RUN EXECUTION →' : 'RUN EXECUTION →'}
         </button>
         {specReady && (
-          <button
-            onClick={onDownloadSpec}
-            className="px-6 lg:px-8 py-3 lg:py-4 border-2 border-white/30 text-white font-mono text-xs lg:text-sm tracking-widest hover:border-white transition-all"
-          >
-            DOWNLOAD SPEC (.md)
-          </button>
+          <>
+            <button
+              onClick={onDownloadDocx}
+              className="px-6 lg:px-8 py-3 lg:py-4 border-2 border-white/30 text-white font-mono text-xs lg:text-sm tracking-widest hover:border-white transition-all"
+            >
+              DOWNLOAD WORD DOC (.docx)
+            </button>
+            <button
+              onClick={onDownloadSpec}
+              className="px-6 lg:px-8 py-3 lg:py-4 border border-white/20 text-white/70 font-mono text-xs lg:text-sm tracking-widest hover:border-white/60 hover:text-white transition-all"
+            >
+              MARKDOWN (.md)
+            </button>
+          </>
         )}
       </div>
 

@@ -5,7 +5,7 @@
 import { NextResponse } from 'next/server';
 import { generateObject } from 'ai';
 import { ensureLLMConfigured, fastModel } from '@/lib/llm';
-import { createServerSupabase, ensureSupabaseConfigured } from '@/lib/supabase';
+import { ensurePostgresConfigured, query } from '@/lib/postgres';
 import {
   ClarifyOutputSchema,
   IngestOutputSchema,
@@ -63,17 +63,16 @@ export async function POST(req: Request) {
 
 async function saveStageOutput(
   sessionId: string,
-  column: string,
+  column: 'clarify_output',
   output: unknown,
   nextStage: string
 ) {
   if (sessionId.startsWith('local-')) return;
-  if (!ensureSupabaseConfigured().ok) return;
-  const supabase = createServerSupabase()!;
-  await supabase
-    .from('workflow_sessions')
-    .update({ [column]: output, current_stage: nextStage })
-    .eq('id', sessionId);
+  if (!ensurePostgresConfigured().ok) return;
+  await query(
+    `update workflow_sessions set ${column} = $1, current_stage = $2 where id = $3`,
+    [JSON.stringify(output), nextStage, sessionId]
+  );
 }
 
 // Save user answers (separate endpoint to make the round-trip explicit).
@@ -83,12 +82,11 @@ export async function PATCH(req: Request) {
   const answers = body.answers;
   if (!sessionId) return NextResponse.json({ error: 'session_id required' }, { status: 400 });
 
-  if (!sessionId.startsWith('local-') && ensureSupabaseConfigured().ok) {
-    const supabase = createServerSupabase()!;
-    await supabase
-      .from('workflow_sessions')
-      .update({ clarify_answers: { answers }, current_stage: 'simulate' })
-      .eq('id', sessionId);
+  if (!sessionId.startsWith('local-') && ensurePostgresConfigured().ok) {
+    await query(
+      `update workflow_sessions set clarify_answers = $1, current_stage = 'simulate' where id = $2`,
+      [JSON.stringify({ answers }), sessionId]
+    );
   }
   return NextResponse.json({ ok: true });
 }
