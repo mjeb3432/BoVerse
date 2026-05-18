@@ -8,11 +8,11 @@ node_modules/
 !.yarn/releases
 !.yarn/versions
 
-# Build outputs
+# Build outputs (anchored to repo root — don't match e.g. app/api/build/)
 .next/
 out/
-build/
-dist/
+/build/
+/dist/
 
 # Production
 *.tsbuildinfo
