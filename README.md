@@ -6,7 +6,10 @@ Atomic workflows. Five primitives. Infinite forms. The workflow factory for SMBs
 
 | Path                                          | What it is                                                                                  |
 |-----------------------------------------------|---------------------------------------------------------------------------------------------|
-| `landing/`                                    | Marketing site (Next.js 16, React 19, Tailwind 4, TypeScript). Live at boverse.ai (planned).|
+| `landing/`                                    | Marketing site + `/build` workflow generator (Next.js 16, React 19, Tailwind 4, TypeScript).|
+| `docx-service/`                               | Python FastAPI sidecar that renders the generated workflow as a production-grade `.docx` (python-docx). |
+| `render.yaml`                                 | Render Blueprint — deploys both services in one click from this repo.                       |
+| `landing/migrations/`                         | Postgres schema. Apply with `psql "$DATABASE_URL" -f landing/migrations/0001_workflow_sessions.sql`. |
 | `Context/BoVerse_Workflow_Factory_Design.md`  | Source-of-truth design doc, rev 6. APPROVED.                                                |
 | `Context/BoVerse_Workflow_Factory_TODOS.md`   | Workflow Factory backend TODOs (P0-P3 + v1.1 + v2 + infra).                                 |
 | `Context/BoVerse_Workflow_Factory_v1.docx`    | v1.0 spec (locked).                                                                         |
@@ -51,6 +54,24 @@ npm run start
 
 - `npm run dev:plain` — runs `next dev` without the auto-open wrapper
 - `npm run lint` — ESLint check
+
+## Production deploy (Render)
+
+Both services (Next.js + python-docx sidecar) deploy together from this repo via the `render.yaml` Blueprint. Render's free tier handles both — no credit card needed. Services sleep after 15 min idle and take ~30s to wake; acceptable for a prototype.
+
+1. **Sign up at https://render.com** (free, no card)
+2. **Connect this GitHub repo** when prompted
+3. **New + → Blueprint** → select `mjeb3432/BoVerse` → Apply
+4. **Apply Postgres schema** to your DB:
+   ```bash
+   psql "$DATABASE_URL" -f landing/migrations/0001_workflow_sessions.sql
+   ```
+5. **Set environment variables** on the `boverse-landing` service in the Render dashboard:
+   - `GOOGLE_GENERATIVE_AI_API_KEY` — get from https://aistudio.google.com/app/apikey
+   - `DATABASE_URL` — your Postgres connection string
+   - `DOCX_SERVICE_URL` — the URL Render generates for `boverse-docx` (something like `https://boverse-docx.onrender.com`)
+
+Pushing to `main` auto-deploys both services.
 
 ## Architecture
 
