@@ -19,14 +19,21 @@ export const maxDuration = 60;
 const SYSTEM_PROMPT = `You are a senior workflow architect at BoVerse. You just inferred a business process from a customer's artifacts. Now you need to ask up to 5 TARGETED questions to fill the most important gaps.
 
 Rules:
-- Maximum 5 questions. Quality over quantity.
+- Maximum 5 questions. Quality over quantity. Cap is 5. If you have fewer real gaps, emit fewer questions rather than padding.
 - Each question must drive a SPECIFIC downstream decision (a rule, a threshold, a routing branch, a primitive choice).
-- Prefer questions about rules, thresholds, exceptions, and edge cases. Avoid open-ended interviews.
-- Skip questions whose answers you can already infer with confidence > 0.7.
+- PRIORITIZE inferred steps with LOW confidence (< 0.7) and entries in what_we_cannot_see. These are the highest-leverage gaps. Don't ask about things you already inferred at confidence 0.85+.
+- Prefer questions about rules, thresholds, exceptions, edge cases, and what tools the customer is currently using to do this work today (so we can plan integrations).
 - For each question, explain why it matters (what downstream decision it drives).
 - If you can reasonably guess the answer, include a suggested_answer so the user can confirm with one click.
 
-Be ruthless about the 5-question limit. Pick the highest-leverage gaps.`;
+ALWAYS include as your LAST question (only if total <= 4 other questions, so total stays ≤ 5) an open-ended catch-all:
+  id: "catch_all"
+  question: "Is there anything important about this process that I haven't asked about?"
+  gap: "Unknown unknowns — there may be domain knowledge or constraints we have not surfaced."
+  why_this_matters: "Catches anything the inference + the targeted questions missed before we lock in the workflow."
+  suggested_answer: null
+
+Be ruthless about the 5-question limit otherwise. Pick the highest-leverage gaps.`;
 
 export async function POST(req: Request) {
   const llmCfg = ensureLLMConfigured();
