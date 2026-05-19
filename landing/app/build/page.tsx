@@ -549,14 +549,16 @@ function StageIngest({
   uploaded: { name: string; size: number; type: string }[];
 }) {
   const [files, setFiles] = useState<File[]>([]);
+  const totalBytes = files.reduce((sum, f) => sum + f.size, 0);
+  const overHardLimit = totalBytes > VERCEL_BODY_LIMIT_BYTES;
 
   return (
     <div className="space-y-8 lg:space-y-10">
       <SectionMarker n="01" label="INGEST" />
       <div>
-        <h2 className="text-2xl lg:text-4xl font-bold font-mono tracking-wider mb-3">DROP UP TO 5 ARTIFACTS.</h2>
+        <h2 className="text-2xl lg:text-4xl font-bold font-mono tracking-wider mb-3">DROP YOUR ARTIFACTS.</h2>
         <p className="text-sm lg:text-base text-white/60 font-mono leading-relaxed max-w-3xl">
-          PDFs · images · emails · spreadsheets · plain text. The factory reads them and reasons backwards to the embedded process.
+          PDFs · images · emails · spreadsheets · JSON · plain text. As many as you want. The factory reads them and reasons backwards to the embedded process.
         </p>
       </div>
 
@@ -577,8 +579,9 @@ function StageIngest({
 
       <div className="flex gap-3">
         <button
-          disabled={files.length === 0 || busy}
+          disabled={files.length === 0 || busy || overHardLimit}
           onClick={() => onSubmit(files)}
+          title={overHardLimit ? `Total ${(totalBytes / 1024 / 1024).toFixed(1)}MB exceeds 4.5MB Vercel limit` : undefined}
           className="px-6 lg:px-8 py-3 lg:py-4 border-2 border-white bg-white text-black font-mono text-xs lg:text-sm tracking-widest hover:bg-black hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
         >
           {busy ? 'INGESTING…' : existing ? 'RE-INGEST →' : 'INGEST →'}
@@ -588,9 +591,36 @@ function StageIngest({
   );
 }
 
+// Vercel serverless functions on Hobby tier cap the request body at 4.5MB.
+// We don't enforce a file count cap (user explicitly asked for "as many as
+// they want"), but we surface a soft warning if total size approaches the
+// limit so the run doesn't silently fail at upload time.
+const VERCEL_BODY_LIMIT_BYTES = 4_500_000;
+const SOFT_WARN_BYTES = 3_500_000;
+
 function FileDropZone({ files, onFiles, disabled }: { files: File[]; onFiles: (f: File[]) => void; disabled: boolean }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [drag, setDrag] = useState(false);
+
+  // Concat new files into the existing list rather than replacing. This way
+  // a user can drop a second batch without losing the first.
+  const addFiles = (incoming: File[]) => {
+    if (incoming.length === 0) return;
+    const merged = [...files, ...incoming];
+    // De-dupe by (name, size) so a re-pick doesn't double-stack.
+    const seen = new Set<string>();
+    const unique = merged.filter((f) => {
+      const key = `${f.name}:${f.size}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    onFiles(unique);
+  };
+
+  const totalBytes = files.reduce((sum, f) => sum + f.size, 0);
+  const overSoftLimit = totalBytes > SOFT_WARN_BYTES;
+  const overHardLimit = totalBytes > VERCEL_BODY_LIMIT_BYTES;
 
   return (
     <div
@@ -603,7 +633,7 @@ function FileDropZone({ files, onFiles, disabled }: { files: File[]; onFiles: (f
         e.preventDefault();
         setDrag(false);
         if (disabled) return;
-        onFiles(Array.from(e.dataTransfer.files).slice(0, 5));
+        addFiles(Array.from(e.dataTransfer.files));
       }}
       className={`border-2 border-dashed ${drag ? 'border-white bg-white/5' : 'border-white/20'} p-8 lg:p-14 text-center transition-colors`}
     >
@@ -612,7 +642,13 @@ function FileDropZone({ files, onFiles, disabled }: { files: File[]; onFiles: (f
         type="file"
         multiple
         accept={ACCEPTED_EXTENSIONS.join(',')}
-        onChange={(e) => onFiles(Array.from(e.target.files ?? []).slice(0, 5))}
+        onChange={(e) => {
+          addFiles(Array.from(e.target.files ?? []));
+          // Reset the input so picking the same file again still triggers
+          // onChange. Without this, native <input type="file"> ignores a
+          // re-selection of an identical name.
+          if (e.target) e.target.value = '';
+        }}
         className="sr-only"
       />
       <div className="font-mono text-xs lg:text-sm text-white/70 mb-4 tracking-wider">DRAG FILES HERE OR</div>
@@ -625,11 +661,45 @@ function FileDropZone({ files, onFiles, disabled }: { files: File[]; onFiles: (f
       </button>
       <div className="mt-4 text-[10px] font-mono text-white/30 tracking-widest">{ACCEPTED_EXTENSIONS.join('  ·  ')}</div>
       {files.length > 0 && (
-        <ul className="mt-6 text-left max-w-md mx-auto space-y-1 font-mono text-xs text-white/80">
-          {files.map((f, i) => (
-            <li key={i} className="border-l-2 border-white/40 pl-3">{f.name} · {(f.size / 1024).toFixed(1)}KB</li>
-          ))}
-        </ul>
+        <div className="mt-6 max-w-md mx-auto">
+          <div className="flex items-center justify-between mb-2 font-mono text-[10px] tracking-widest">
+            <span className="text-white/40">{files.length} FILE{files.length === 1 ? '' : 'S'} · {(totalBytes / 1024).toFixed(0)}KB TOTAL</span>
+            <button
+              type="button"
+              onClick={() => onFiles([])}
+              disabled={disabled}
+              className="text-white/40 hover:text-white tracking-widest underline-offset-4 hover:underline disabled:opacity-30"
+            >
+              CLEAR ALL
+            </button>
+          </div>
+          <ul className="text-left space-y-1 font-mono text-xs text-white/80">
+            {files.map((f, i) => (
+              <li key={`${f.name}:${f.size}:${i}`} className="border-l-2 border-white/40 pl-3 flex items-center justify-between gap-3">
+                <span className="truncate">{f.name} · {(f.size / 1024).toFixed(1)}KB</span>
+                <button
+                  type="button"
+                  onClick={() => onFiles(files.filter((_, j) => j !== i))}
+                  disabled={disabled}
+                  className="text-white/30 hover:text-white text-[10px] tracking-widest shrink-0 disabled:opacity-30"
+                  aria-label={`Remove ${f.name}`}
+                >
+                  ×
+                </button>
+              </li>
+            ))}
+          </ul>
+          {overHardLimit && (
+            <div className="mt-3 border border-red-400/40 bg-red-400/5 px-3 py-2 font-mono text-[10px] text-red-200 tracking-widest text-left">
+              ⚠ TOTAL {(totalBytes / 1024 / 1024).toFixed(1)}MB EXCEEDS VERCEL 4.5MB UPLOAD LIMIT. REMOVE SOME FILES BEFORE INGESTING.
+            </div>
+          )}
+          {!overHardLimit && overSoftLimit && (
+            <div className="mt-3 border border-yellow-400/40 bg-yellow-400/5 px-3 py-2 font-mono text-[10px] text-yellow-200 tracking-widest text-left">
+              NOTE: {(totalBytes / 1024 / 1024).toFixed(1)}MB IS NEAR THE 4.5MB UPLOAD CEILING.
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
