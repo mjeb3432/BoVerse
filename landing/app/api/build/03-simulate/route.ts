@@ -1,18 +1,20 @@
-// Stage 03 — SIMULATE. Generates input schema + ~10 synthetic data rows
+// Stage 03 — SIMULATE. Generates input schema + ~10 synthetic rows
 // (7 happy + 3 deliberate edge cases) for downstream execution.
 //
-// Three-provider fallback chain:
-//   1. Cerebras gpt-oss-120b — FASTEST (~3-5s per call), no rate limits on
-//      free tier, but rejects minItems/maxItems so we pass the LOOSE schema
-//      and post-validate the count in code.
-//   2. Gemini 2.5-flash       — slower (~30s) but best at hitting the count
-//      target. Validates against the STRICT schema.
-//   3. Groq gpt-oss-120b      — third-fastest, same model as Cerebras but
-//      hosted differently. Validates against STRICT.
+// Provider fallback chain:
+//   1. Cerebras gpt-oss-120b — FASTEST (~3-5s), no rate limit, but rejects
+//      `minItems`/`maxItems` and empty-object schemas. Uses the LOOSE
+//      LLM schema; row count is post-validated in code.
+//   2. Groq gpt-oss-120b     — medium speed, no rate limit. Strict schema.
+//   3. Gemini 2.5-flash      — slow + rate-limited but best at row counts.
+//                              Strict schema. Save for last so we don't
+//                              burn the 5-req/min quota early in the chain.
 //
-// We try Cerebras FIRST now (per user request): it never rate-limits and
-// returns in ~5s instead of 30s on Gemini. If Cerebras returns too few rows
-// (<5), we fall through to Gemini for a higher-quality count.
+// KEY FIX (May 2026): The `data` field on each row was previously `z.unknown()`
+// which compiles to `{}` (empty object schema). Cerebras strict mode rejected
+// this with "Unsupported JSON schema fields in schema with keys: dict_keys([])".
+// Now the LLM emits `data_json` as a JSON-stringified payload (z.string),
+// and we parse it server-side before saving. Works on all three providers.
 
 import { NextResponse } from 'next/server';
 import { generateObject } from 'ai';
@@ -25,10 +27,12 @@ import {
   ClarifyAnswersSchema,
   ClarifyOutputSchema,
   IngestOutputSchema,
-  SimulateOutputSchema,
-  SimulateOutputSchemaLoose,
+  SimulateOutputLLMSchemaLoose,
+  SimulateOutputLLMSchemaStrict,
   type SimulateOutput,
+  type SyntheticRowLLMSchema,
 } from '@/lib/workflow-types';
+import type { z } from 'zod';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -43,13 +47,28 @@ YOU MUST EMIT 10 ROWS IN TOTAL. Not 3. Not 5. Ten. Seven happy + three edge. If 
 
 For edge cases, populate the edge_case_description field with the specific failure mode being tested (e.g. "heritage multiplier collides with loyalty discount", "scope ambiguity should trigger human gate", "labour rate exception for property mgmt"). For happy rows, set edge_case_description to null.
 
-Every row's data field MUST be a fully populated object whose keys match the schema field names you defined above. Realistic, specific values — never empty objects, never generic placeholders like "John Doe" or "Test Co". The data field is what downstream Stage 05 will actually execute the workflow against, so it must be runnable.`;
+CRITICAL FORMAT RULE for the row payload:
+  The data_json field is a STRING containing a JSON-stringified object.
+  It is NOT a raw JSON object. You must emit a STRING that, when parsed
+  with JSON.parse, yields an object whose keys match the schema field
+  names you defined above, with realistic specific values.
+
+  Example shape (do not copy these values — generate realistic ones):
+    "data_json": "{\\"inquiry_id\\":\\"INQ-001\\",\\"client_name\\":\\"Acme Co\\",\\"budget\\":35000}"
+
+  Note the escaped quotes inside the string. Every key from your schema
+  should appear in every row's data_json. Realistic, specific values —
+  never empty objects, never generic placeholders like "John Doe" or
+  "Test Co".`;
 
 const MIN_USABLE_ROWS = 5;
 
+type LLMRow = z.infer<typeof SyntheticRowLLMSchema>;
+type LLMOutput = { schema: SimulateOutput['schema']; rows: LLMRow[] };
+
 interface ProviderAttempt {
   name: string;
-  run: () => Promise<SimulateOutput>;
+  run: () => Promise<LLMOutput>;
 }
 
 export async function POST(req: Request) {
@@ -69,12 +88,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'invalid stage inputs' }, { status: 400 });
   }
 
-  const userMsg = `## Inferred process\n\n\`\`\`json\n${JSON.stringify(ingest.data, null, 2)}\n\`\`\`\n\n## Clarification\n\nQuestions:\n\`\`\`json\n${JSON.stringify(clarify.data, null, 2)}\n\`\`\`\n\nAnswers:\n\`\`\`json\n${JSON.stringify(answers.data, null, 2)}\n\`\`\`\n\nProduce the input schema and 10 synthetic rows (7 happy + 3 edge cases).`;
+  const userMsg = `## Inferred process\n\n\`\`\`json\n${JSON.stringify(ingest.data, null, 2)}\n\`\`\`\n\n## Clarification\n\nQuestions:\n\`\`\`json\n${JSON.stringify(clarify.data, null, 2)}\n\`\`\`\n\nAnswers:\n\`\`\`json\n${JSON.stringify(answers.data, null, 2)}\n\`\`\`\n\nProduce the input schema and 10 synthetic rows (7 happy + 3 edge cases). Remember: data_json must be a JSON-stringified STRING, not a raw object.`;
 
-  // Build the attempt list. Order matters: Cerebras first for speed, Gemini
-  // for count reliability, Groq as final fallback. Each attempt does its own
-  // validation step — Cerebras uses the LOOSE schema (no min/max) and we
-  // check the count manually.
+  // Provider chain. Cerebras first for speed, Groq for capacity, Gemini last
+  // because of its 5 RPM cap (and frequent "high demand" errors).
   const attempts: ProviderAttempt[] = [];
 
   if (HAS_CEREBRAS_KEY) {
@@ -83,32 +100,28 @@ export async function POST(req: Request) {
       run: async () => {
         const { object } = await generateObject({
           model: cerebras('gpt-oss-120b'),
-          schema: SimulateOutputSchemaLoose, // <-- no minItems/maxItems
+          schema: SimulateOutputLLMSchemaLoose,
           messages: [
             { role: 'system', content: SYSTEM_PROMPT },
             { role: 'user', content: userMsg },
           ],
-          temperature: 0.3, // determinism
+          temperature: 0.3,
         });
-        // Post-validate. If too few rows, treat as a soft failure so we
-        // fall through to the next provider rather than ship a bad payload.
         if (!object.rows || object.rows.length < MIN_USABLE_ROWS) {
-          throw new Error(
-            `Cerebras returned only ${object.rows?.length ?? 0} rows; need at least ${MIN_USABLE_ROWS}.`
-          );
+          throw new Error(`Cerebras returned only ${object.rows?.length ?? 0} rows; need ≥${MIN_USABLE_ROWS}.`);
         }
-        return object as SimulateOutput;
+        return object as LLMOutput;
       },
     });
   }
 
-  if (HAS_GOOGLE_KEY) {
+  if (HAS_GROQ_KEY) {
     attempts.push({
-      name: 'gemini-2.5-flash',
+      name: 'groq-gpt-oss-120b',
       run: async () => {
         const { object } = await generateObject({
-          model: google('gemini-2.5-flash'),
-          schema: SimulateOutputSchema, // strict
+          model: groq('openai/gpt-oss-120b'),
+          schema: SimulateOutputLLMSchemaStrict,
           messages: [
             { role: 'system', content: SYSTEM_PROMPT },
             { role: 'user', content: userMsg },
@@ -120,13 +133,13 @@ export async function POST(req: Request) {
     });
   }
 
-  if (HAS_GROQ_KEY) {
+  if (HAS_GOOGLE_KEY) {
     attempts.push({
-      name: 'groq-gpt-oss-120b',
+      name: 'gemini-2.5-flash',
       run: async () => {
         const { object } = await generateObject({
-          model: groq('openai/gpt-oss-120b'),
-          schema: SimulateOutputSchema,
+          model: google('gemini-2.5-flash'),
+          schema: SimulateOutputLLMSchemaStrict,
           messages: [
             { role: 'system', content: SYSTEM_PROMPT },
             { role: 'user', content: userMsg },
@@ -142,13 +155,44 @@ export async function POST(req: Request) {
   for (const attempt of attempts) {
     const t0 = Date.now();
     try {
-      const output = await attempt.run();
+      const raw = await attempt.run();
+      // Parse each row's data_json string into the canonical object shape.
+      // If a row's data_json is malformed, skip that row rather than failing
+      // the whole stage — partial data is still useful.
+      const parsedRows: SimulateOutput['rows'] = [];
+      const dropped: Array<{ row_id: string; reason: string }> = [];
+      for (const row of raw.rows) {
+        try {
+          const data = JSON.parse(row.data_json) as Record<string, unknown>;
+          parsedRows.push({
+            row_id: row.row_id,
+            kind: row.kind,
+            edge_case_description: row.edge_case_description,
+            data,
+          });
+        } catch (parseErr) {
+          dropped.push({ row_id: row.row_id, reason: (parseErr as Error).message });
+        }
+      }
+
+      if (parsedRows.length < MIN_USABLE_ROWS) {
+        throw new Error(
+          `${attempt.name} produced ${raw.rows.length} rows but only ${parsedRows.length} had valid data_json. Need ≥${MIN_USABLE_ROWS}.`
+        );
+      }
+
+      const output: SimulateOutput = {
+        schema: raw.schema,
+        rows: parsedRows,
+      };
+
       await saveStageOutput(sessionId, 'simulate_output', output, 'generate');
       return NextResponse.json({
         output,
         provider: attempt.name,
         provider_ms: Date.now() - t0,
         prior_attempts: errors,
+        dropped_rows: dropped,
       });
     } catch (err) {
       errors.push({
@@ -163,7 +207,7 @@ export async function POST(req: Request) {
   return NextResponse.json(
     {
       error: 'llm_error',
-      message: `All ${errors.length} provider(s) failed for Stage 03. ${errors.map((e) => `[${e.provider} ${e.ms}ms] ${e.message.slice(0, 120)}`).join(' | ')}`,
+      message: `All ${errors.length} provider(s) failed for Stage 03. ${errors.map((e) => `[${e.provider} ${e.ms}ms] ${e.message.slice(0, 140)}`).join(' | ')}`,
       attempts: errors,
     },
     { status: 500 }

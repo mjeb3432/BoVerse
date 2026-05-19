@@ -73,39 +73,61 @@ export const SchemaFieldSchema = z.object({
   enum_values: z.array(z.string()).nullable(),
 });
 
+// The CANONICAL runtime shape for a synthetic row. `data` is a parsed
+// object (Record<string, unknown>) so downstream code (Stage 05 engine,
+// /sessions detail view, swarm prompt renderer) doesn't have to think
+// about serialization.
 export const SyntheticRowSchema = z.object({
   row_id: z.string(),
   kind: z.enum(['happy', 'edge']),
   // Nullable (see note on ClarifyQuestionSchema). Happy rows emit null here;
   // edge rows describe the failure mode being tested.
   edge_case_description: z.string().nullable(),
-  // The row payload is open-shape (the schema differs per inferred process).
-  // We can't use `z.record()` here because it compiles to JSON-Schema
-  // `propertyNames`, which OpenAI strict mode rejects with
-  //   "propertyNames is not supported [unsupported_propertyNames]".
-  // `z.unknown()` becomes `{}` (no constraints) in the emitted schema, which
-  // OpenAI accepts. Consumers cast to Record<string, unknown> on read.
   data: z.unknown(),
 });
 
-// Two variants of the simulate schema so we can use the full provider chain:
+// LLM-FACING variant. `data` is a JSON-stringified payload (z.string)
+// instead of z.unknown / z.record because every alternative breaks a
+// provider:
 //
-//   SimulateOutputSchema       — strict (.min(2).max(15)) for Gemini + Groq.
-//   SimulateOutputSchemaLoose  — no array bounds, for Cerebras (which rejects
-//                                minItems/maxItems in strict json_schema).
+//   - z.unknown()        → JSON schema {} → Cerebras: "Unsupported JSON
+//                          schema fields in schema with keys: dict_keys([])".
+//   - z.record()         → propertyNames → Cerebras + OpenAI strict reject.
+//   - z.object({}).partial() → also dict_keys([]).
 //
-// Stage 03's route validates the LOOSE result count in code afterwards, so
-// the count guarantee survives the provider swap.
+// Telling the LLM to emit a JSON-string and parsing it server-side works on
+// ALL three providers and removes the entire class of "open-shape object"
+// schema problems. The system prompt is updated to say so explicitly.
+export const SyntheticRowLLMSchema = z.object({
+  row_id: z.string(),
+  kind: z.enum(['happy', 'edge']),
+  edge_case_description: z.string().nullable(),
+  data_json: z.string(),
+});
+
+// Two LLM-facing simulate schemas — strict (for Gemini + Groq, with array
+// bounds) and loose (for Cerebras, which rejects minItems/maxItems).
+// The route post-parses each row's `data_json` into the canonical
+// SyntheticRowSchema.data object before saving / returning.
+export const SimulateOutputLLMSchemaStrict = z.object({
+  schema: z.array(SchemaFieldSchema),
+  rows: z.array(SyntheticRowLLMSchema).min(2).max(15),
+});
+export const SimulateOutputLLMSchemaLoose = z.object({
+  schema: z.array(SchemaFieldSchema),
+  rows: z.array(SyntheticRowLLMSchema),
+});
+
+// Runtime / persistence shape. This is what saves to Postgres and what
+// the rest of the app consumes.
 export const SimulateOutputSchema = z.object({
   schema: z.array(SchemaFieldSchema),
   rows: z.array(SyntheticRowSchema).min(2).max(15),
 });
 export type SimulateOutput = z.infer<typeof SimulateOutputSchema>;
 
-export const SimulateOutputSchemaLoose = z.object({
-  schema: z.array(SchemaFieldSchema),
-  rows: z.array(SyntheticRowSchema),
-});
+// Deprecated alias kept temporarily — used by route imports.
+export const SimulateOutputSchemaLoose = SimulateOutputLLMSchemaLoose;
 
 // ────────────────────────────────────────────────────────────────────────────
 // Stage 04 — GENERATE
