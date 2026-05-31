@@ -151,3 +151,114 @@ export async function buildSimulation(store: CanonicalStore, sessionId: string):
     step_trace,
   };
 }
+
+// ─── reprojection (the Part D edit loop) ─────────────────────────────────────
+// After the user edits an input value, KEEP the edited inputs and re-render ONLY
+// the output from them. This is what keeps the two surfaces mutually consistent.
+
+function renderInputValue(value: unknown): string {
+  if (value == null) return '(no value)';
+  if (typeof value === 'string') return value;
+  try {
+    if (Array.isArray(value)) {
+      return value.map((v) => (v && typeof v === 'object' ? JSON.stringify(v) : String(v))).join('\n');
+    }
+    if (typeof value === 'object') {
+      return Object.entries(value as Record<string, unknown>)
+        .map(([k, v]) => `${k}: ${v && typeof v === 'object' ? JSON.stringify(v) : String(v)}`)
+        .join('\n');
+    }
+  } catch {
+    /* fall through */
+  }
+  return String(value);
+}
+
+const OutputLLMSchema = z.object({
+  rendered_sample: z.string(),
+  computed_fields: z.array(z.object({ label: z.string(), value: z.string() })),
+  grading_targets: z.array(z.string()),
+});
+
+async function renderOutputFromInputs(store: CanonicalStore, sampleInputs: SampleInput[]) {
+  const out = store.outputs[0];
+  const inputsBlock = sampleInputs
+    .map((si) => `### ${si.input_name}\n${JSON.stringify(si.example_value, null, 2)}`)
+    .join('\n\n');
+  const rulesBlock = store.rules
+    .map((r) => `- ${r.rule_name}: WHEN ${r.condition ?? '(unspecified)'} THEN ${r.action ?? '(unspecified)'}${r.threshold ? ` [${r.threshold}]` : ''}`)
+    .join('\n');
+  const prompt = `Render the deliverable "${out?.output_name ?? 'Output'}" from these FIXED example inputs, applying the business rules IN ORDER (multipliers before discounts; honor thresholds/approval gates; never mark up pass-through). Do not change the inputs.
+
+INPUTS:
+${inputsBlock}
+
+RULES:
+${rulesBlock || '(no explicit rules)'}
+
+Required sections: ${(out?.required_sections ?? []).join(', ') || '(sensible sections)'}.
+Return the rendered deliverable, the key computed_fields (label + value), and grading_targets.`;
+
+  const { object } = await generateObject({
+    model: fastModel(),
+    schema: OutputLLMSchema,
+    messages: [{ role: 'user', content: [{ type: 'text', text: prompt }] }],
+  });
+  return object;
+}
+
+export async function reproject(store: CanonicalStore): Promise<SimulationPack> {
+  const runtimeInputs = store.inputs.filter((i) => isRuntime(i.input_type));
+  const sample_inputs: SampleInput[] = runtimeInputs.map((i) => ({
+    input_name: i.input_name ?? 'input',
+    input_type: i.input_type,
+    format: i.format,
+    rendered: renderInputValue(i.example_value),
+    example_value: i.example_value ?? null,
+  }));
+
+  const o = await renderOutputFromInputs(store, sample_inputs);
+  const computed_fields: Record<string, unknown> = {};
+  for (const c of o.computed_fields) computed_fields[c.label] = c.value;
+
+  const out = store.outputs[0];
+  const sample_output: SampleOutput = {
+    output_name: out?.output_name ?? 'Output',
+    output_type: out?.output_type ?? 'document',
+    output_format: out?.output_format ?? 'unknown',
+    required_sections: out?.required_sections ?? [],
+    rendered_sample: o.rendered_sample,
+    computed_fields,
+  };
+
+  const input_contract: SimSchemaField[] = runtimeInputs.map((i) => ({
+    name: i.input_name ?? 'input',
+    type: 'object',
+    description: `${i.input_type} input (${i.format})`,
+    required: i.required_or_optional !== 'optional',
+    enum_values: null,
+  }));
+
+  const step_trace = store.steps.map((s, idx) => ({
+    sequence_order: s.sequence_order ?? idx + 1,
+    step_name: s.step_name ?? `step ${idx + 1}`,
+    consumed: s.input_required.join(', '),
+    produced: s.output_produced ?? '',
+    determinism: {
+      rule: s.deterministic_rule_available,
+      reasoning: s.probabilistic_reasoning_required,
+      hitl: s.hitl_required,
+    },
+    rule_fired: null,
+  }));
+
+  return {
+    workflow_id: store.identity.workflow_id ?? '',
+    version: 1,
+    input_contract,
+    sample_output,
+    sample_inputs,
+    grading_targets: o.grading_targets,
+    step_trace,
+  };
+}
