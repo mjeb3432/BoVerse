@@ -156,6 +156,23 @@ export async function getWorkflowIdForSession(sessionId: string): Promise<string
   return res?.rows[0]?.workflow_id ?? null;
 }
 
+// ─── session envelope helpers ────────────────────────────────────────────────
+/** Return a usable session id, creating a workflow_sessions row in DB mode. */
+export async function ensureSession(sessionId?: string | null): Promise<string> {
+  if (sessionId && sessionId.length > 0) return sessionId;
+  if (!HAS_DATABASE) return 'local-' + randomUUID();
+  const res = await query<{ id: string }>(
+    `insert into workflow_sessions (current_stage) values ('extract') returning id`,
+  );
+  return res?.rows[0]?.id ?? 'local-' + randomUUID();
+}
+
+/** Advance the session's state-machine column (DB only). */
+export async function setSessionStage(sessionId: string, stage: string): Promise<void> {
+  if (!HAS_DATABASE || sessionId.startsWith('local-')) return;
+  await query('update workflow_sessions set current_stage = $1 where id = $2', [stage, sessionId]);
+}
+
 export async function getCanonical(workflowId: string): Promise<CanonicalStore | null> {
   if (!HAS_DATABASE) {
     return MEMORY.get(workflowId) ?? null;
