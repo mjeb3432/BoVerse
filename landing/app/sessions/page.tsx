@@ -79,7 +79,7 @@ export default function SessionsPage() {
         {sessions && sessions.length === 0 && (
           <div className="border border-white/10 p-8 font-mono text-sm text-white/60">
             No sessions yet. Head to{' '}
-            <Link href="/build" className="text-white underline hover:no-underline">/build</Link>{' '}
+            <Link href="/factory" className="text-white underline hover:no-underline">/factory</Link>{' '}
             to create your first one.
           </div>
         )}

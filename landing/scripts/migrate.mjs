@@ -28,6 +28,8 @@ const files = [
   '0002_rag_assets.sql',
   '0003_rag_assets_loosen_type.sql',
   '0004_inputs_and_graph.sql',
+  '0005_canonical_store.sql',
+  '0006_build_artifacts.sql',
 ];
 
 const client = new Client({

@@ -165,7 +165,7 @@ export default function Home() {
             {/* Buttons with technical accents */}
             <div className="flex flex-col lg:flex-row gap-3 lg:gap-4">
               <Link
-                href="/build"
+                href="/factory"
                 className="relative inline-block px-5 lg:px-6 py-2 lg:py-2.5 bg-transparent text-white font-mono text-xs lg:text-sm border border-white hover:bg-white hover:text-black focus-visible:bg-white focus-visible:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black transition-all duration-200 group tracking-widest"
               >
                 <span className="hidden lg:block absolute -top-1 -left-1 w-2 h-2 border-t border-l border-white opacity-0 group-hover:opacity-100 transition-opacity"></span>
