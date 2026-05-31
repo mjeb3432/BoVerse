@@ -304,12 +304,52 @@ body.sw {
 .sw-hud-card { pointer-events: auto; border-radius: 3px; padding: 18px 20px; background: var(--paper); border: 1px solid var(--ink); box-shadow: 6px 6px 0 var(--ink); transform: translateY(12px); opacity: 0; transition: transform .55s var(--sw-ease), opacity .55s var(--sw-ease); }
 .sw-hud.show .sw-hud-card { transform: translateY(0); opacity: 1; }
 .sw-hud.show .sw-hud-card.c2 { transition-delay: .1s; }
-.sw-hud-gate { pointer-events: auto; align-self: center; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; opacity: 0; transition: opacity .55s var(--sw-ease) .18s; }
+.sw-hud-gate { pointer-events: auto; align-self: center; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; opacity: 0; transition: opacity .55s var(--sw-ease) .18s; }
 .sw-hud.show .sw-hud-gate { opacity: 1; }
-.sw-ring { width: 56px; height: 56px; border-radius: 50%; border: 1px solid var(--ink); display: grid; place-items: center; }
-.sw-ring span { width: 22px; height: 22px; border-radius: 50%; background: var(--signal); animation: sw-pulse 2.2s ease-in-out infinite; }
+
+/* ---- approve junction: schematic network diagram (replaces the old ring) ----
+   Three input wires from Phase 1 converge on a ringed junction (vermilion
+   diamond at the centre); three output wires diverge to Phase 2. Travelling
+   pulses suggest data flow. Editorial: hairlines, ink, one vermilion signal. */
+.sw-net { width: clamp(150px, 60vw, 200px); height: auto; color: var(--ink); display: block; overflow: visible; }
+.sw-net-wires path { fill: none; stroke: currentColor; stroke-width: 1; vector-effect: non-scaling-stroke; opacity: 0.5; }
+.sw-net-ends rect { fill: currentColor; opacity: 0.78; }
+.sw-net-junction circle { fill: var(--paper); stroke: currentColor; stroke-width: 1; vector-effect: non-scaling-stroke; }
+.sw-net-junction circle:nth-of-type(1) { opacity: 0.55; }
+.sw-net-junction circle:nth-of-type(2) { opacity: 0.8; }
+.sw-net-diamond { fill: var(--signal); transform-box: fill-box; transform-origin: center; animation: sw-pulse 2.4s ease-in-out infinite; }
+.sw-net-pulse circle { fill: var(--signal); }
+.sw-net-pulse { transform-box: view-box; transform-origin: 0 0; animation: sw-net-flow 2.8s linear infinite; opacity: 0; }
+.sw-net-pulse.b { animation-delay: 1.4s; }
+.sw-net-label { font-family: var(--font-geist-mono), monospace; font-size: 10.5px; font-weight: 500; letter-spacing: 0.26em; text-transform: uppercase; color: var(--ink); margin-top: 2px; }
+@keyframes sw-net-flow {
+  0%   { transform: translateX(0);     opacity: 0; }
+  10%  { opacity: 0.95; }
+  90%  { opacity: 0.95; }
+  100% { transform: translateX(200px); opacity: 0; }
+}
+
+/* ---- HUD scroll cue: tells the user the demo dissolves on scroll ----
+   Sits at the same bottom-left position as the hero cue (which is hidden
+   while assembled), so the cue visually replaces it without a jump. */
+.sw-hud-scrollcue {
+  position: fixed; z-index: 12;
+  bottom: 24px; left: clamp(20px, 5vw, 48px);
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 10.5px; letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--ink-dim);
+  opacity: 0; transition: opacity .5s var(--sw-ease) .35s;
+  pointer-events: none;
+}
+.sw-hud-scrollcue.show { opacity: 1; }
+
 @media (max-width: 720px) { .sw-hud-grid { grid-template-columns: 1fr; gap: 12px; } }
-@media (prefers-reduced-motion: reduce) { .sw-dot, .sw-ring span, .sw-mouse::after { animation: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .sw-dot, .sw-mouse::after { animation: none; }
+  .sw-net-pulse, .sw-net-diamond { animation: none; }
+  .sw-net-pulse { opacity: 0; }
+}
 
 /* ---- build bundle: object ledger + file viewer ---- */
 .sw-ledger-row:last-child { border-bottom: 0 !important; }
@@ -350,9 +390,13 @@ body.sw {
 .sw-btn:disabled:hover, .sw-btn[disabled]:hover { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 .sw-btn.ghost:disabled:hover, .sw-btn.ghost[disabled]:hover { background: transparent; color: var(--ink); }
 
-/* inverted button — paper on an ink field (final CTA) */
-.sw-btn.invert { background: var(--paper); color: var(--ink); border-color: var(--paper); }
-.sw-btn.invert:hover { background: var(--signal); color: #fff; border-color: var(--signal); }
+/* inverted button — paper on an ink field (final CTA).
+   NOTE: class name is `.inverse` (not `.invert`) because Tailwind v4 ships a
+   `.invert` utility that applies `filter: invert(100%)` — that would render
+   every color as its sRGB complement (vermilion → cyan, paper → dark navy).
+   `.inverse` keeps the semantic intent without the utility collision. */
+.sw-btn.inverse { background: var(--paper); color: var(--ink); border-color: var(--paper); }
+.sw-btn.inverse:hover { background: var(--signal); color: #fff; border-color: var(--signal); }
 
 @media (prefers-reduced-motion: reduce) {
   .sw-orbit::after, .sw-orbit > span { animation: none; }
