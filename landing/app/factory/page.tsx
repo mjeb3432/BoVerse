@@ -148,7 +148,15 @@ export default function FactoryPage() {
       body: JSON.stringify({ session_id: sessionId, kind: 'approve' }),
     });
     if (res.status === 409) { setError(data.message || 'Resolve the open questions first.'); return; }
-    setPhase('approved');
+    // Approval releases the Build swarm — build the implementation, then show it.
+    setPhase('approved'); setStatus('Building the implementation…');
+    try {
+      const { data: b } = await jsonFetch('/api/factory/swarm2/build', {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ session_id: sessionId }),
+      });
+      if (b.build_id) { window.location.href = `/factory/${b.build_id}`; return; }
+      setError(b.message || b.error || 'Build failed.');
+    } catch (e) { setError((e as Error).message); }
   }
 
   const computed = useMemo(() => Object.entries(sampleOutput?.computed_fields ?? {}), [sampleOutput]);

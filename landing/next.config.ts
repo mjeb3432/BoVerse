@@ -16,7 +16,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/contact',
-        destination: '/build',
+        destination: '/factory',
         permanent: true,
       },
     ];
