@@ -3,10 +3,12 @@
 // The build bundle view. The centerpiece is the OBJECT LEDGER — all 10 BoVerse
 // objects, each BUILT or REFUSED with a reason. That ledger IS the proof that
 // the build path determines the objects: only what the archetype needs is built.
-// Aesthetic: mono / black / ASCII glyphs / semantic badges.
+// Aesthetic: Living Swarm — space-black, frosted glass, cyan/indigo glow.
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import SwarmCanvas from '@/components/swarm/swarm-canvas';
+import SiteHeader from '@/components/site/site-header';
 
 interface ManifestObject { object_type: string; status: 'built' | 'refused'; reason: string | null; file_count: number }
 interface Manifest {
@@ -39,75 +41,180 @@ export default function BundlePage() {
 
   const built = manifest?.objects.filter((o) => o.status === 'built').length ?? 0;
   const refused = manifest?.objects.filter((o) => o.status === 'refused').length ?? 0;
+  const verifyPassed = manifest?.verification_status === 'passed';
 
   return (
-    <main className="min-h-screen bg-black text-white font-mono">
-      <div className="container mx-auto px-6 lg:px-16 py-16 lg:py-24 max-w-5xl">
-        <div className="flex items-center gap-2 mb-6 opacity-60">
-          <div className="w-8 h-px bg-white" />
-          <span className="text-[10px] tracking-widest">BUILD · BUNDLE</span>
-          <div className="flex-1 h-px bg-white" />
-        </div>
+    <>
+      <SwarmCanvas density="calm" interactive={false} dim={0.4} />
+      <SiteHeader />
+      <div className="sw-content">
+        <main id="main" className="sw-panel" style={{ paddingTop: 'clamp(112px, 16vh, 168px)' }}>
+          <div className="sw-wrap" style={{ maxWidth: 960 }}>
+            <div className="sw-kicker mb-5">BUILD · BUNDLE</div>
 
-        {error && <div role="alert" className="border border-orange-400/60 text-orange-400/90 text-xs p-3 mb-6">{error}</div>}
-        {!manifest && !error && <div className="text-[11px] tracking-widest text-yellow-400">◐ Loading bundle…</div>}
+            {error && (
+              <div
+                role="alert"
+                className="glass"
+                style={{ borderRadius: 16, padding: '14px 18px', marginBottom: 24, borderColor: 'rgba(255,138,128,0.4)' }}
+              >
+                <span className="sw-mono" style={{ color: '#ff9a8a', fontSize: 13 }}>{error}</span>
+              </div>
+            )}
+            {!manifest && !error && (
+              <div className="sw-mono sw-muted" style={{ fontSize: 13, letterSpacing: '0.18em', display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+                <span className="sw-spark" aria-hidden="true" />
+                Loading bundle…
+              </div>
+            )}
 
-        {manifest && (
-          <>
-            <h1 className="text-2xl lg:text-4xl font-bold tracking-wider mb-3">{(manifest.workflow_name ?? 'WORKFLOW').toUpperCase()}</h1>
-            <div className="flex flex-wrap items-center gap-2 mb-2 text-[9px] tracking-widest">
-              <span className="px-2 py-0.5 border border-white text-white">{manifest.primary_archetype}</span>
-              <span className={`px-2 py-0.5 border ${manifest.verification_status === 'passed' ? 'border-white text-white' : 'border-orange-400 text-orange-400'}`}>VERIFY · {manifest.verification_status.toUpperCase()}</span>
-              <span className="px-2 py-0.5 border border-white/40 text-white/60">{built} BUILT · {refused} REFUSED</span>
-            </div>
-            {manifest.build_path && <p className="text-xs text-white/60 leading-relaxed max-w-3xl mb-8">{manifest.build_path}</p>}
+            {manifest && (
+              <>
+                <h1 className="sw-h sw-gradient" style={{ fontSize: 'clamp(34px, 6vw, 60px)', marginBottom: 18 }}>
+                  {manifest.workflow_name ?? 'Workflow'}
+                </h1>
 
-            {/* download bar */}
-            <div className="flex flex-wrap gap-3 mb-10">
-              <a href={`/api/factory/swarm2/${buildId}?download=zip`} className="px-6 py-2.5 bg-white text-black text-xs tracking-widest border border-white hover:bg-transparent hover:text-white transition-all">DOWNLOAD BUNDLE (.zip) ↓</a>
-              <a href={`/api/factory/swarm2/${buildId}?download=md`} className="px-5 py-2.5 border border-white text-xs tracking-widest hover:bg-white hover:text-black transition-colors">SPEC (.md) ↓</a>
-              <a href={`/api/factory/swarm2/${buildId}?download=json`} className="px-5 py-2.5 border border-white text-xs tracking-widest hover:bg-white hover:text-black transition-colors">MANIFEST (.json) ↓</a>
-            </div>
-
-            {/* object ledger */}
-            <section className="mb-10">
-              <div className="text-[10px] tracking-widest text-white/40 mb-3">OBJECT LEDGER · ONLY WHAT THIS WORKFLOW NEEDS</div>
-              <div className="border border-white/20">
-                <div className="grid grid-cols-12 gap-3 px-4 py-2 border-b border-white/10 text-[10px] text-white/40 tracking-widest bg-white/[0.02]">
-                  <div className="col-span-4">OBJECT</div>
-                  <div className="col-span-2">STATUS</div>
-                  <div className="col-span-6">DETAIL</div>
+                <div className="flex flex-wrap items-center gap-2.5 mb-3">
+                  <span className="sw-badge sw-mono" style={{ fontSize: 11, letterSpacing: '0.16em' }}>
+                    <span className="sw-mini indigo" aria-hidden="true" />
+                    {manifest.primary_archetype}
+                  </span>
+                  <span
+                    className="sw-badge sw-mono"
+                    style={{
+                      fontSize: 11,
+                      letterSpacing: '0.16em',
+                      borderColor: verifyPassed ? 'rgba(56,225,255,0.45)' : 'rgba(255,138,128,0.45)',
+                      color: verifyPassed ? 'var(--sw-cyan)' : '#ff9a8a',
+                    }}
+                  >
+                    <span className="sw-mini" style={{ background: verifyPassed ? 'var(--sw-cyan)' : '#ff8a80', boxShadow: `0 0 10px ${verifyPassed ? 'var(--sw-cyan)' : '#ff8a80'}` }} aria-hidden="true" />
+                    VERIFY · {manifest.verification_status.toUpperCase()}
+                  </span>
+                  <span className="sw-badge sw-mono sw-muted" style={{ fontSize: 11, letterSpacing: '0.16em' }}>
+                    {built} BUILT · {refused} REFUSED
+                  </span>
                 </div>
-                {manifest.objects.map((o) => (
-                  <div key={o.object_type} className="grid grid-cols-12 gap-3 px-4 py-3 border-b border-white/5 last:border-b-0 hover:bg-white/[0.02] transition-colors items-center text-xs">
-                    <div className="col-span-4 text-white/80">{o.object_type}</div>
-                    <div className="col-span-2">
-                      <span className={`text-[9px] tracking-widest px-2 py-0.5 border ${o.status === 'built' ? 'border-white text-white' : 'border-orange-400 text-orange-400'}`}>{o.status.toUpperCase()}</span>
-                    </div>
-                    <div className="col-span-6 text-white/50">{o.status === 'built' ? `${o.file_count} file(s)` : o.reason}</div>
-                  </div>
-                ))}
-              </div>
-            </section>
 
-            {/* file viewer */}
-            <section>
-              <div className="text-[10px] tracking-widest text-white/40 mb-3">FILES</div>
-              <div className="space-y-2">
-                {files.map((f) => (
-                  <details key={f.path} className="border border-white/20">
-                    <summary className="cursor-pointer px-4 py-2.5 text-xs text-white/80 flex items-center justify-between">
-                      <span>{f.path}</span>
-                      <span className="text-[9px] tracking-widest text-white/30">{f.media_type}</span>
-                    </summary>
-                    <pre className="px-4 pb-4 whitespace-pre-wrap text-[11px] text-white/60 overflow-x-auto">{f.content}</pre>
-                  </details>
-                ))}
-              </div>
-            </section>
-          </>
-        )}
+                {manifest.build_path && (
+                  <p className="sw-muted" style={{ fontSize: 15, lineHeight: 1.65, maxWidth: 720, marginBottom: 34 }}>
+                    {manifest.build_path}
+                  </p>
+                )}
+
+                {/* download bar */}
+                <div className="flex flex-wrap gap-3 mb-12">
+                  <a href={`/api/factory/swarm2/${buildId}?download=zip`} className="sw-btn sm">
+                    Download bundle (.zip) ↓
+                  </a>
+                  <a href={`/api/factory/swarm2/${buildId}?download=md`} className="sw-btn ghost sm">
+                    Spec (.md) ↓
+                  </a>
+                  <a href={`/api/factory/swarm2/${buildId}?download=json`} className="sw-btn ghost sm">
+                    Manifest (.json) ↓
+                  </a>
+                </div>
+
+                {/* object ledger — the centerpiece */}
+                <section className="mb-12">
+                  <div className="sw-eyebrow mb-4">
+                    <span className="sw-spark" aria-hidden="true" />
+                    Object ledger · only what this workflow needs
+                  </div>
+                  <div className="glass" style={{ borderRadius: 22 }}>
+                    <div
+                      className="grid grid-cols-12 gap-3 sw-mono sw-muted-2"
+                      style={{ padding: '14px 22px', fontSize: 10, letterSpacing: '0.22em', borderBottom: '1px solid var(--sw-line)' }}
+                    >
+                      <div className="col-span-5">OBJECT</div>
+                      <div className="col-span-3">STATUS</div>
+                      <div className="col-span-4">DETAIL</div>
+                    </div>
+                    {manifest.objects.map((o) => {
+                      const isBuilt = o.status === 'built';
+                      return (
+                        <div
+                          key={o.object_type}
+                          className="sw-ledger-row grid grid-cols-12 gap-3 items-center"
+                          data-status={o.status}
+                          style={{
+                            padding: '16px 22px',
+                            borderBottom: '1px solid var(--sw-line)',
+                            opacity: isBuilt ? 1 : 0.5,
+                            transition: 'background .35s var(--sw-ease), opacity .35s var(--sw-ease), box-shadow .35s var(--sw-ease)',
+                          }}
+                        >
+                          <div className="col-span-5">
+                            <span className="sw-h" style={{ fontSize: 15, color: isBuilt ? 'var(--sw-white)' : 'var(--sw-muted)' }}>
+                              {o.object_type}
+                            </span>
+                          </div>
+                          <div className="col-span-3">
+                            <span
+                              className="sw-badge sw-mono"
+                              style={{
+                                fontSize: 10,
+                                letterSpacing: '0.16em',
+                                padding: '5px 11px',
+                                borderColor: isBuilt ? 'rgba(56,225,255,0.45)' : 'rgba(255,176,90,0.4)',
+                                color: isBuilt ? 'var(--sw-cyan)' : '#ffb05a',
+                                background: isBuilt ? 'rgba(56,225,255,0.06)' : 'rgba(255,176,90,0.05)',
+                              }}
+                            >
+                              <span
+                                className="sw-mini"
+                                style={{ width: 7, height: 7, background: isBuilt ? 'var(--sw-cyan)' : '#ffb05a', boxShadow: `0 0 9px ${isBuilt ? 'var(--sw-cyan)' : '#ffb05a'}` }}
+                                aria-hidden="true"
+                              />
+                              {o.status.toUpperCase()}
+                            </span>
+                          </div>
+                          <div className="col-span-4 sw-muted" style={{ fontSize: 13 }}>
+                            {isBuilt ? `${o.file_count} file(s)` : o.reason}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+
+                {/* file viewer */}
+                <section>
+                  <div className="sw-kicker mb-4">Files</div>
+                  <div className="space-y-3">
+                    {files.map((f) => (
+                      <details key={f.path} className="sw-card sw-file">
+                        <summary
+                          className="cursor-pointer flex items-center justify-between"
+                          style={{ padding: '14px 18px', listStyle: 'none' }}
+                        >
+                          <span className="sw-mono" style={{ fontSize: 13, color: 'var(--sw-white)' }}>{f.path}</span>
+                          <span className="sw-mono sw-muted-2" style={{ fontSize: 10, letterSpacing: '0.14em' }}>{f.media_type}</span>
+                        </summary>
+                        <pre
+                          className="sw-mono"
+                          style={{
+                            margin: '0 14px 14px',
+                            padding: 16,
+                            borderRadius: 14,
+                            background: 'rgba(4,6,14,0.6)',
+                            border: '1px solid var(--sw-line)',
+                            whiteSpace: 'pre-wrap',
+                            fontSize: 12,
+                            lineHeight: 1.6,
+                            color: 'var(--sw-muted)',
+                            overflowX: 'auto',
+                          }}
+                        >{f.content}</pre>
+                      </details>
+                    ))}
+                  </div>
+                </section>
+              </>
+            )}
+          </div>
+        </main>
       </div>
-    </main>
+    </>
   );
 }
