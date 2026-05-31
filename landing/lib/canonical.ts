@@ -261,6 +261,7 @@ const CHILD_TABLES: Record<string, { rowsKey: keyof CanonicalStore; cols: ColSpe
     { name: 'confidence_score' },
   ] },
   missing_information: { rowsKey: 'gaps', cols: [
+    { name: 'gap_id' },
     { name: 'missing_attribute' }, { name: 'why_it_matters' }, { name: 'affected_output' },
     { name: 'affected_step' }, { name: 'possible_sources' }, { name: 'suggested_question' },
     { name: 'severity' }, { name: 'blocking_status' }, { name: 'gap_kind' },
