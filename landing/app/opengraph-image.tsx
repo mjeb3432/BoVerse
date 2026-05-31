@@ -5,21 +5,22 @@ export const alt = 'BoVerse · Describe it. We build it.';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
-// A drifting swarm of particles flowing left→right toward the "build" — the
-// Living Swarm brand, rendered for social cards. Satori-safe (flex + gradients).
+// Editorial Paper social card: warm paper, ink type, a stipple of ink particles
+// flowing toward the "build" with the vermilion signal at the destination.
+// Satori-safe (flex + solid fills only).
 const DOTS = [
-  { x: 250, y: 250, r: 7, c: '#38e1ff', o: 0.9 },
-  { x: 300, y: 330, r: 5, c: '#6e8bff', o: 0.7 },
-  { x: 360, y: 230, r: 9, c: '#38e1ff', o: 0.8 },
-  { x: 420, y: 320, r: 6, c: '#6e8bff', o: 0.6 },
-  { x: 470, y: 260, r: 11, c: '#38e1ff', o: 0.95 },
-  { x: 540, y: 300, r: 6, c: '#6e8bff', o: 0.7 },
-  { x: 600, y: 240, r: 8, c: '#38e1ff', o: 0.85 },
-  { x: 660, y: 320, r: 5, c: '#6e8bff', o: 0.6 },
-  { x: 720, y: 270, r: 10, c: '#6e8bff', o: 0.9 },
-  { x: 790, y: 250, r: 7, c: '#6e8bff', o: 0.75 },
-  { x: 850, y: 300, r: 6, c: '#6e8bff', o: 0.7 },
-  { x: 910, y: 270, r: 12, c: '#6e8bff', o: 1 },
+  { x: 250, y: 250, r: 6, c: '#3a362c', o: 0.7 },
+  { x: 300, y: 330, r: 4, c: '#6a6354', o: 0.6 },
+  { x: 360, y: 230, r: 8, c: '#17150f', o: 0.85 },
+  { x: 420, y: 320, r: 5, c: '#3a362c', o: 0.6 },
+  { x: 470, y: 262, r: 7, c: '#17150f', o: 0.8 },
+  { x: 540, y: 300, r: 5, c: '#6a6354', o: 0.55 },
+  { x: 600, y: 240, r: 7, c: '#3a362c', o: 0.7 },
+  { x: 660, y: 320, r: 4, c: '#6a6354', o: 0.5 },
+  { x: 720, y: 270, r: 8, c: '#17150f', o: 0.85 },
+  { x: 800, y: 252, r: 6, c: '#3a362c', o: 0.7 },
+  { x: 858, y: 300, r: 8, c: '#e5402a', o: 0.95 },
+  { x: 912, y: 268, r: 12, c: '#e5402a', o: 1 },
 ];
 
 export default async function OpengraphImage() {
@@ -32,15 +33,11 @@ export default async function OpengraphImage() {
           display: 'flex',
           flexDirection: 'column',
           position: 'relative',
-          backgroundColor: '#04060e',
+          backgroundColor: '#f1ece1',
           fontFamily: 'ui-sans-serif, system-ui, sans-serif',
         }}
       >
-        {/* glow fields */}
-        <div style={{ position: 'absolute', display: 'flex', top: -260, right: -180, width: 760, height: 760, borderRadius: 760, backgroundImage: 'radial-gradient(circle, rgba(56,225,255,0.20), rgba(56,225,255,0) 65%)' }} />
-        <div style={{ position: 'absolute', display: 'flex', bottom: -320, left: -200, width: 820, height: 820, borderRadius: 820, backgroundImage: 'radial-gradient(circle, rgba(110,139,255,0.22), rgba(110,139,255,0) 65%)' }} />
-
-        {/* swarm dots */}
+        {/* swarm dots (ink stipple → vermilion at the build end) */}
         {DOTS.map((d, i) => (
           <div
             key={i}
@@ -54,52 +51,43 @@ export default async function OpengraphImage() {
               borderRadius: d.r * 2,
               backgroundColor: d.c,
               opacity: d.o,
-              boxShadow: `0 0 ${d.r * 3}px ${d.c}`,
             }}
           />
         ))}
 
         {/* content */}
-        <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', flex: 1, padding: '64px 80px', justifyContent: 'space-between' }}>
-          {/* brand */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <div style={{ display: 'flex', width: 20, height: 20, borderRadius: 20, backgroundColor: '#38e1ff', boxShadow: '0 0 24px #38e1ff' }} />
-            <span style={{ color: '#f3f6ff', fontSize: 24, fontWeight: 700, letterSpacing: '0.22em' }}>BOVERSE</span>
-            <span style={{ color: 'rgba(154,166,200,0.8)', fontSize: 18, letterSpacing: '0.2em', marginLeft: 8 }}>THE WORKFLOW FACTORY</span>
+        <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', flex: 1, padding: '60px 80px', justifyContent: 'space-between' }}>
+          {/* masthead rule */}
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', height: 2, backgroundColor: '#17150f' }} />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ display: 'flex', width: 14, height: 14, backgroundColor: '#e5402a', transform: 'rotate(45deg)' }} />
+                <span style={{ color: '#17150f', fontSize: 22, fontWeight: 700, letterSpacing: '0.06em' }}>BOVERSE</span>
+              </div>
+              <span style={{ color: '#837c6c', fontSize: 16, letterSpacing: '0.22em' }}>THE WORKFLOW FACTORY</span>
+            </div>
           </div>
 
           {/* headline */}
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                fontSize: 116,
-                fontWeight: 700,
-                lineHeight: 1.0,
-                letterSpacing: '-0.03em',
-                color: 'transparent',
-                backgroundImage: 'linear-gradient(180deg, #ffffff 35%, #c4d2ff 100%)',
-                backgroundClip: 'text',
-                WebkitBackgroundClip: 'text',
-              }}
-            >
+            <div style={{ display: 'flex', flexDirection: 'column', fontSize: 120, fontWeight: 700, lineHeight: 0.92, letterSpacing: '-0.04em', color: '#17150f' }}>
               <span>Describe it.</span>
               <span>We build it.</span>
             </div>
-            <div style={{ display: 'flex', marginTop: 34, maxWidth: 760, fontSize: 25, lineHeight: 1.45, color: 'rgba(196,210,255,0.82)' }}>
+            <div style={{ display: 'flex', marginTop: 32, maxWidth: 760, fontSize: 25, lineHeight: 1.45, color: '#4f4a3f' }}>
               Two AI swarms infer your workflow and build it. You only review and approve.
             </div>
           </div>
 
           {/* bottom chrome */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 17, letterSpacing: '0.16em' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14, color: 'rgba(154,166,200,0.85)' }}>
-              <span style={{ color: '#38e1ff' }}>SWARM 1 · DISCOVERY</span>
-              <span style={{ color: 'rgba(154,166,200,0.5)' }}>→</span>
-              <span style={{ color: '#6e8bff' }}>SWARM 2 · BUILD</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 16, letterSpacing: '0.16em', paddingTop: 14, borderTop: '1px solid rgba(23,21,15,0.16)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, color: '#4f4a3f' }}>
+              <span>SWARM 01 / DISCOVERY</span>
+              <span style={{ color: '#837c6c' }}>/</span>
+              <span style={{ color: '#c0341f' }}>SWARM 02 / BUILD</span>
             </div>
-            <span style={{ color: 'rgba(154,166,200,0.7)' }}>boverse.ai</span>
+            <span style={{ color: '#837c6c' }}>boverse.ai</span>
           </div>
         </div>
       </div>
