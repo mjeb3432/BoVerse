@@ -3,7 +3,7 @@
 // The build bundle view. The centerpiece is the OBJECT LEDGER — all 10 BoVerse
 // objects, each BUILT or REFUSED with a reason. That ledger IS the proof that
 // the build path determines the objects: only what the archetype needs is built.
-// Honors DESIGN.md (mono / black / ASCII / semantic badges).
+// Aesthetic: mono / black / ASCII glyphs / semantic badges.
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';

@@ -4,7 +4,7 @@
 // outcome, uploads evidence, answers a few questions, then reviews ONLY two
 // things: a sample OUTPUT and a sample-INPUTS pack. They comment / edit inputs
 // and approve. All machinery (canonical store, archetype, rules) is hidden
-// behind the OPERATOR drawer. Honors DESIGN.md (mono / black / ASCII / badges).
+// behind the OPERATOR drawer. Aesthetic: mono / black / ASCII glyphs / semantic badges.
 
 import { useCallback, useMemo, useRef, useState } from 'react';
 
