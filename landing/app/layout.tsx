@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, Inter, Geist_Mono } from "next/font/google";
+import Magnetic from "@/components/swarm/magnetic";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -16,6 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://boverse.ai"),
   title: "BoVerse · Describe it. We build it.",
   description:
     "Tell BoVerse the outcome you want and upload whatever you already have. Two AI swarms infer the workflow and build it. You only review and approve.",
@@ -50,6 +52,7 @@ export default function RootLayout({
         >
           Skip to main content
         </a>
+        <Magnetic />
         {children}
       </body>
     </html>
