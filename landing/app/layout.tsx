@@ -1,17 +1,20 @@
 import type { Metadata } from "next";
-import { Space_Grotesk, Inter, Geist_Mono } from "next/font/google";
-import Magnetic from "@/components/swarm/magnetic";
+import { Bricolage_Grotesque, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-const spaceGrotesk = Space_Grotesk({
-  variable: "--font-space-grotesk",
+// Editorial system: Bricolage Grotesque (display — characterful, print-grade),
+// Inter (body — neutral workhorse), JetBrains Mono (technical annotations /
+// data). The mono var keeps the legacy name --font-geist-mono so the whole CSS
+// kit + pages keep referencing one variable.
+const bricolage = Bricolage_Grotesque({
+  variable: "--font-bricolage",
   subsets: ["latin"],
 });
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
 });
-const geistMono = Geist_Mono({
+const mono = JetBrains_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
@@ -42,17 +45,16 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${spaceGrotesk.variable} ${inter.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${bricolage.variable} ${inter.variable} ${mono.variable} h-full antialiased`}
     >
       <body className="sw min-h-full flex flex-col">
         {/* Skip link for keyboard / screen reader users */}
         <a
           href="#main"
-          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-white focus:text-black focus:text-xs focus:tracking-widest focus:rounded focus:outline-none focus:ring-2 focus:ring-[#38e1ff]"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-[#17150F] focus:text-[#F1ECE1] focus:text-xs focus:tracking-widest focus:outline-none focus:ring-2 focus:ring-[#E5402A]"
         >
           Skip to main content
         </a>
-        <Magnetic />
         {children}
       </body>
     </html>

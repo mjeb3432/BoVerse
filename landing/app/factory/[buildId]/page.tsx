@@ -3,7 +3,8 @@
 // The build bundle view. The centerpiece is the OBJECT LEDGER — all 10 BoVerse
 // objects, each BUILT or REFUSED with a reason. That ledger IS the proof that
 // the build path determines the objects: only what the archetype needs is built.
-// Aesthetic: Living Swarm — space-black, frosted glass, cyan/indigo glow.
+// Aesthetic: Editorial Paper — warm bone paper, ink type, one vermilion signal,
+// hairline rules, monospaced annotations. A precise audit document, not a HUD.
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
@@ -63,9 +64,9 @@ export default function BundlePage() {
       <div className="sw-content">
         <main id="main" className="sw-panel" style={{ paddingTop: 'clamp(112px, 16vh, 168px)' }}>
           <div className="sw-wrap" style={{ maxWidth: 960 }}>
-            <div className="sw-kicker mb-5">BUILD · BUNDLE</div>
+            <div className="sw-kicker mb-5">BUILD / BUNDLE</div>
 
-            <h1 className="sw-h sw-gradient" style={{ fontSize: 'clamp(34px, 6vw, 60px)', marginBottom: 18 }}>
+            <h1 className="sw-h" style={{ fontSize: 'clamp(34px, 6vw, 60px)', marginBottom: 18 }}>
               {manifest ? (manifest.workflow_name ?? 'Workflow') : error ? 'Build not found' : 'Loading your bundle'}
             </h1>
 
@@ -73,10 +74,10 @@ export default function BundlePage() {
               <div
                 role="alert"
                 className="glass"
-                style={{ borderRadius: 18, padding: '20px 22px', marginBottom: 24, borderColor: 'rgba(255,138,128,0.4)', maxWidth: 540 }}
+                style={{ padding: '20px 22px', marginBottom: 24, borderColor: '#c0341f', maxWidth: 540 }}
               >
                 <p className="sw-muted" style={{ fontSize: 14, lineHeight: 1.6, marginBottom: 16 }}>{error}</p>
-                <a href="/factory" className="sw-btn ghost sm">← Build a workflow</a>
+                <a href="/factory" className="sw-btn ghost sm">Build a workflow</a>
               </div>
             )}
             {!manifest && !error && (
@@ -99,15 +100,15 @@ export default function BundlePage() {
                     style={{
                       fontSize: 11,
                       letterSpacing: '0.16em',
-                      borderColor: verifyPassed ? 'rgba(56,225,255,0.45)' : 'rgba(255,138,128,0.45)',
-                      color: verifyPassed ? 'var(--sw-cyan)' : '#ff9a8a',
+                      borderColor: verifyPassed ? 'var(--signal)' : '#c0341f',
+                      color: verifyPassed ? 'var(--signal-ink)' : '#c0341f',
                     }}
                   >
-                    <span className="sw-mini" style={{ background: verifyPassed ? 'var(--sw-cyan)' : '#ff8a80', boxShadow: `0 0 10px ${verifyPassed ? 'var(--sw-cyan)' : '#ff8a80'}` }} aria-hidden="true" />
-                    VERIFY · {manifest.verification_status.toUpperCase()}
+                    <span className="sw-mini" style={{ background: verifyPassed ? 'var(--signal)' : '#c0341f' }} aria-hidden="true" />
+                    VERIFY / {manifest.verification_status.toUpperCase()}
                   </span>
                   <span className="sw-badge sw-mono sw-muted" style={{ fontSize: 11, letterSpacing: '0.16em' }}>
-                    {built} BUILT · {refused} REFUSED
+                    {built} BUILT / {refused} REFUSED
                   </span>
                 </div>
 
@@ -120,13 +121,13 @@ export default function BundlePage() {
                 {/* download bar */}
                 <div className="flex flex-wrap gap-3 mb-12">
                   <a href={`/api/factory/swarm2/${buildId}?download=zip`} className="sw-btn sm">
-                    Download bundle (.zip) ↓
+                    Download bundle (.zip)
                   </a>
                   <a href={`/api/factory/swarm2/${buildId}?download=md`} className="sw-btn ghost sm">
-                    Spec (.md) ↓
+                    Spec (.md)
                   </a>
                   <a href={`/api/factory/swarm2/${buildId}?download=json`} className="sw-btn ghost sm">
-                    Manifest (.json) ↓
+                    Manifest (.json)
                   </a>
                 </div>
 
@@ -134,12 +135,12 @@ export default function BundlePage() {
                 <section className="mb-12">
                   <div className="sw-eyebrow mb-4">
                     <span className="sw-spark" aria-hidden="true" />
-                    Object ledger · only what this workflow needs
+                    Object ledger / only what this workflow needs
                   </div>
-                  <div className="glass" style={{ borderRadius: 22 }}>
+                  <div className="glass">
                     <div
                       className="grid grid-cols-12 gap-3 sw-mono sw-muted-2"
-                      style={{ padding: '14px 22px', fontSize: 10, letterSpacing: '0.22em', borderBottom: '1px solid var(--sw-line)' }}
+                      style={{ padding: '14px 22px', fontSize: 10, letterSpacing: '0.22em', borderBottom: '1px solid var(--rule)' }}
                     >
                       <div className="col-span-5">OBJECT</div>
                       <div className="col-span-3">STATUS</div>
@@ -154,13 +155,13 @@ export default function BundlePage() {
                           data-status={o.status}
                           style={{
                             padding: '16px 22px',
-                            borderBottom: '1px solid var(--sw-line)',
-                            opacity: isBuilt ? 1 : 0.5,
+                            borderBottom: '1px solid var(--rule)',
+                            opacity: isBuilt ? 1 : 0.55,
                             transition: 'background .35s var(--sw-ease), opacity .35s var(--sw-ease), box-shadow .35s var(--sw-ease)',
                           }}
                         >
                           <div className="col-span-5">
-                            <span className="sw-h" style={{ fontSize: 15, color: isBuilt ? 'var(--sw-white)' : 'var(--sw-muted)' }}>
+                            <span className="sw-h" style={{ fontSize: 15, color: isBuilt ? 'var(--ink)' : 'var(--ink-dim)' }}>
                               {o.object_type}
                             </span>
                           </div>
@@ -171,14 +172,14 @@ export default function BundlePage() {
                                 fontSize: 10,
                                 letterSpacing: '0.16em',
                                 padding: '5px 11px',
-                                borderColor: isBuilt ? 'rgba(56,225,255,0.45)' : 'rgba(255,176,90,0.4)',
-                                color: isBuilt ? 'var(--sw-cyan)' : '#ffb05a',
-                                background: isBuilt ? 'rgba(56,225,255,0.06)' : 'rgba(255,176,90,0.05)',
+                                borderColor: isBuilt ? 'var(--signal)' : 'var(--rule-2)',
+                                color: isBuilt ? 'var(--signal-ink)' : 'var(--ink-faint)',
+                                background: 'var(--paper)',
                               }}
                             >
                               <span
                                 className="sw-mini"
-                                style={{ width: 7, height: 7, background: isBuilt ? 'var(--sw-cyan)' : '#ffb05a', boxShadow: `0 0 9px ${isBuilt ? 'var(--sw-cyan)' : '#ffb05a'}` }}
+                                style={{ width: 7, height: 7, background: isBuilt ? 'var(--signal)' : 'var(--ink-faint)' }}
                                 aria-hidden="true"
                               />
                               {o.status.toUpperCase()}
@@ -203,7 +204,7 @@ export default function BundlePage() {
                           className="cursor-pointer flex items-center justify-between"
                           style={{ padding: '14px 18px', listStyle: 'none' }}
                         >
-                          <span className="sw-mono" style={{ fontSize: 13, color: 'var(--sw-white)' }}>{f.path}</span>
+                          <span className="sw-mono" style={{ fontSize: 13, color: 'var(--ink)' }}>{f.path}</span>
                           <span className="sw-mono sw-muted-2" style={{ fontSize: 10, letterSpacing: '0.14em' }}>{f.media_type}</span>
                         </summary>
                         <pre
@@ -211,13 +212,13 @@ export default function BundlePage() {
                           style={{
                             margin: '0 14px 14px',
                             padding: 16,
-                            borderRadius: 14,
-                            background: 'rgba(4,6,14,0.6)',
-                            border: '1px solid var(--sw-line)',
+                            borderRadius: 3,
+                            background: 'var(--paper-3)',
+                            border: '1px solid var(--rule)',
                             whiteSpace: 'pre-wrap',
                             fontSize: 12,
                             lineHeight: 1.6,
-                            color: 'var(--sw-muted)',
+                            color: 'var(--ink)',
                             overflowX: 'auto',
                           }}
                         >{f.content}</pre>

@@ -44,7 +44,7 @@ export default function SwarmCanvas({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d', { alpha: false });
+    const ctx = canvas.getContext('2d', { alpha: true });
     if (!ctx) return;
 
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -71,10 +71,12 @@ export default function SwarmCanvas({
     const frac = (x: number) => { x = x % 1; return x < 0 ? x + 1 : x; };
     const hashAngle = (i: number) => { const s = Math.sin(i * 12.9898) * 43758.5453; return s - Math.floor(s); };
     const clampF = (v: number) => (v > MAXFORCE ? MAXFORCE : v < -MAXFORCE ? -MAXFORCE : v);
+    // Ink gradient: dark warm ink → mid warm ink. A monochrome stipple on paper,
+    // no neon. The vermilion signal is a separate sprite (see buildSprites).
     const lerpColor = (t: number): [number, number, number] => [
-      Math.round(110 + (56 - 110) * t),
-      Math.round(139 + (225 - 139) * t),
-      255,
+      Math.round(28 + (94 - 28) * t),
+      Math.round(26 + (88 - 26) * t),
+      Math.round(18 + (72 - 18) * t),
     ];
 
     function targetCount() {
@@ -166,27 +168,27 @@ export default function SwarmCanvas({
       gateX = gx; streamY = gy;
     }
 
+    // Crisp ink dot: solid core, soft edge, NO white highlight (which would punch
+    // a hole on paper). Used for both the ink gradient and the vermilion signal.
+    function makeDot(rgb: [number, number, number]) {
+      const size = SPRITE_R * 2;
+      const oc = document.createElement('canvas');
+      oc.width = size; oc.height = size;
+      const g = oc.getContext('2d')!;
+      const cx = SPRITE_R, cy = SPRITE_R;
+      const grad = g.createRadialGradient(cx, cy, 0, cx, cy, SPRITE_R);
+      grad.addColorStop(0, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},1)`);
+      grad.addColorStop(0.5, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.9)`);
+      grad.addColorStop(1, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0)`);
+      g.fillStyle = grad; g.fillRect(0, 0, size, size);
+      return oc;
+    }
     function buildSprites() {
       SPRITES.length = 0;
       for (let b = 0; b < SPRITE_BUCKETS; b++) {
-        const t = b / (SPRITE_BUCKETS - 1);
-        const c = lerpColor(t);
-        const size = SPRITE_R * 2;
-        const oc = document.createElement('canvas');
-        oc.width = size; oc.height = size;
-        const g = oc.getContext('2d')!;
-        const cx = SPRITE_R, cy = SPRITE_R;
-        const grad = g.createRadialGradient(cx, cy, 0, cx, cy, SPRITE_R);
-        grad.addColorStop(0, `rgba(${c[0]},${c[1]},${c[2]},0.95)`);
-        grad.addColorStop(0.38, `rgba(${c[0]},${c[1]},${c[2]},0.28)`);
-        grad.addColorStop(1, `rgba(${c[0]},${c[1]},${c[2]},0)`);
-        g.fillStyle = grad; g.fillRect(0, 0, size, size);
-        const core = g.createRadialGradient(cx, cy, 0, cx, cy, SPRITE_R * 0.22);
-        core.addColorStop(0, 'rgba(255,255,255,0.9)');
-        core.addColorStop(1, 'rgba(255,255,255,0)');
-        g.fillStyle = core; g.fillRect(0, 0, size, size);
-        SPRITES.push(oc);
+        SPRITES.push(makeDot(lerpColor(b / (SPRITE_BUCKETS - 1))));
       }
+      SPRITES.push(makeDot([229, 64, 42])); // index SPRITE_BUCKETS = vermilion signal
     }
 
     let t0 = performance.now();
@@ -277,42 +279,43 @@ export default function SwarmCanvas({
     }
 
     function render() {
+      // Ink on paper: clear to transparent (the CSS paper ground shows through),
+      // normal compositing — additive would wash the page white.
+      ctx!.clearRect(0, 0, W, H);
       ctx!.globalCompositeOperation = 'source-over';
-      ctx!.fillStyle = `rgba(4,6,14,${0.22 + assembly * 0.12})`;
-      ctx!.fillRect(0, 0, W, H);
-      ctx!.globalCompositeOperation = 'lighter';
-      const assemblyScale = 1 + assembly * 0.25;
+      const assemblyScale = 1 + assembly * 0.2;
+      const assembled = mode === 1;
       for (let i = 0; i < N; i++) {
         const s = sz[i] * assemblyScale;
         const spd = Math.abs(vx[i]) + Math.abs(vy[i]);
-        const bright = 0.55 + Math.min(0.45, spd * 0.16);
-        const dr = s * 4.2;
-        const bkt = ((hue[i] * (SPRITE_BUCKETS - 1) + 0.5) | 0);
-        ctx!.globalAlpha = bright;
+        // Vermilion is rare in the free flock; assembled, it marks the Build
+        // cluster (zone 2). Discovery + the connecting stream stay ink.
+        const signal = assembled ? assignZone[i] === 2 : (i & 7) === 0;
+        const dr = s * (signal ? 3.6 : 4.0);
+        const bkt = signal ? SPRITE_BUCKETS : ((hue[i] * (SPRITE_BUCKETS - 1) + 0.5) | 0);
+        ctx!.globalAlpha = Math.min(1, (signal ? 0.8 : 0.42) + Math.min(0.25, spd * 0.1));
         ctx!.drawImage(SPRITES[bkt], px[i] - dr, py[i] - dr, dr * 2, dr * 2);
       }
       ctx!.globalAlpha = 1;
       if (assembly > 0.35) {
         const a = (assembly - 0.35) / 0.65;
-        ctx!.globalCompositeOperation = 'lighter';
-        ctx!.strokeStyle = `rgba(56,225,255,${0.18 * a})`;
-        ctx!.lineWidth = 1.2;
-        ctx!.beginPath(); ctx!.arc(gateX, streamY, 46, 0, 6.2832); ctx!.stroke();
+        ctx!.strokeStyle = `rgba(23,21,15,${0.5 * a})`;
+        ctx!.lineWidth = 1;
+        ctx!.beginPath(); ctx!.arc(gateX, streamY, 48, 0, 6.2832); ctx!.stroke();
       }
-      ctx!.globalCompositeOperation = 'source-over';
     }
 
     function renderStaticFrame() {
+      ctx!.clearRect(0, 0, W, H);
       ctx!.globalCompositeOperation = 'source-over';
-      ctx!.fillStyle = '#04060e'; ctx!.fillRect(0, 0, W, H);
-      ctx!.globalCompositeOperation = 'lighter';
       for (let i = 0; i < N; i++) {
-        const dr = sz[i] * 1.6 * 4.2;
-        const bkt = ((hue[i] * (SPRITE_BUCKETS - 1) + 0.5) | 0);
-        ctx!.globalAlpha = 0.85;
+        const dr = sz[i] * 1.6 * 4.0;
+        const signal = (i & 7) === 0;
+        const bkt = signal ? SPRITE_BUCKETS : ((hue[i] * (SPRITE_BUCKETS - 1) + 0.5) | 0);
+        ctx!.globalAlpha = signal ? 0.8 : 0.5;
         ctx!.drawImage(SPRITES[bkt], px[i] - dr, py[i] - dr, dr * 2, dr * 2);
       }
-      ctx!.globalAlpha = 1; ctx!.globalCompositeOperation = 'source-over';
+      ctx!.globalAlpha = 1;
     }
 
     let running = true, rafId: number | null = null;

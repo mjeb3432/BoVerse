@@ -1,16 +1,13 @@
 'use client';
 
-// BoVerse home — the Living Swarm showcase. A real boids canvas backdrop
-// (SwarmCanvas) self-assembles into the two-swarm pipeline while a build HUD
-// fades in. The hero copy recedes, the swarm becomes the star, and a live
-// "Discovery → approve → Build" diagram plays. Scroll past the hero (or click
-// "Watch it build") to trigger it; scroll on past the hero to dissolve.
+// BoVerse home — editorial paper. A boids canvas (ink on paper) self-assembles
+// into the two-swarm pipeline while a build diagram fades in. Scroll past the
+// hero (or press "Watch it build") to trigger it; scroll on to dissolve.
 //
-// The page only orchestrates state (assembled / dim) + the scroll listener;
-// all visuals come from the shared Living Swarm design system (SwarmCanvas,
-// Reveal, SiteHeader, SiteFooter, and the sw- CSS classes in globals.css).
-// The root layout supplies <body className="sw"> + metadata, so this page
-// needs neither. Convention: Swarm 1 / Discovery = cyan, Swarm 2 / Build = indigo.
+// The page only orchestrates state (assembled / dim) + the scroll listener; all
+// visuals come from the editorial system in globals.css (SwarmCanvas, Reveal,
+// SiteHeader, SiteFooter, sw- classes). Convention: Discovery = ink, Build =
+// vermilion signal. The root layout supplies <body className="sw"> + metadata.
 
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
@@ -19,20 +16,18 @@ import Reveal from '@/components/swarm/reveal';
 import SiteHeader from '@/components/site/site-header';
 import SiteFooter from '@/components/site/site-footer';
 
-// The sw- kit ports the container classes (sw-hud-card, sw-card, sw-step…) but
-// not the nested leaf rules the mockup scoped inline. We re-create just those
-// leaves here so the rendered surfaces match the approved mockup 1:1.
-const TAG = {
-  fontFamily: 'var(--font-space-grotesk), sans-serif',
-  fontSize: 11,
-  letterSpacing: '0.18em',
+// Monospace label (eyebrows, captions, annotations).
+const LABEL = {
+  fontFamily: 'var(--font-geist-mono), monospace',
+  fontSize: 10.5,
+  letterSpacing: '0.22em',
   textTransform: 'uppercase',
-  fontWeight: 600,
-  marginBottom: 6,
+  fontWeight: 500,
+  color: 'var(--ink-dim)',
 } as const;
 
-const HUD_H4 = { fontSize: 'clamp(15px, 2.4vw, 19px)', marginBottom: 4 } as const;
-const HUD_P = { fontSize: 12.5, color: 'var(--sw-muted)', margin: 0, lineHeight: 1.45 } as const;
+const HUD_H4 = { fontSize: 'clamp(16px, 2.4vw, 20px)', marginBottom: 6, color: 'var(--ink)' } as const;
+const HUD_P = { fontSize: 12.5, color: 'var(--ink-dim)', margin: 0, lineHeight: 1.5 } as const;
 
 export default function Page() {
   const [assembled, setAssembled] = useState(false);
@@ -60,15 +55,10 @@ export default function Page() {
       const hero = heroRef.current;
       const y = window.scrollY;
       const vh = window.innerHeight;
-      // fraction of the hero still visible (1 at top, 0 once scrolled past)
       const heroBottom = hero ? hero.getBoundingClientRect().bottom : vh - y;
       const heroVisible = Math.max(0, Math.min(1, heroBottom / vh));
-      // Assemble once the user nudges down but while >55% of the hero remains,
-      // so the decorative HUD never paints over the content sections below.
       const wantAssembled = y > vh * 0.12 && heroVisible > 0.55;
       if (wantAssembled !== assembledRef.current) setAssembled(wantAssembled);
-      // Calm the swarm down past the hero so sections read clearly, but keep
-      // the particle accent alive (never fully gone).
       setDim(0.32 + 0.68 * heroVisible);
     };
 
@@ -83,7 +73,6 @@ export default function Page() {
     manualLockRef.current = true;
     setAssembled((prev) => {
       const next = !prev;
-      // when assembling via the button, push the backdrop bright
       setDim(next ? 1 : 0.32 + 0.68);
       return next;
     });
@@ -102,57 +91,54 @@ export default function Page() {
       <SwarmCanvas assembled={assembled} dim={dim} />
       <SiteHeader />
 
-      {/* Live build HUD — fades in while the swarm assembles into the pipeline */}
+      {/* Live build diagram — fades in while the swarm assembles into the pipeline */}
       <div className={`sw-hud${assembled ? ' show' : ''}`} aria-hidden="true">
         <div className="sw-hud-grid">
           <div className="sw-hud-card c1">
-            <div className="sw-h" style={{ ...TAG, color: 'var(--sw-cyan)' }}>Swarm 1 · Discovery</div>
+            <div style={{ ...LABEL, marginBottom: 8 }}>Swarm 01 / Discovery</div>
             <h4 className="sw-h" style={HUD_H4}>Infers the workflow</h4>
             <p style={HUD_P}>Reads your evidence and shows a sample to approve.</p>
           </div>
           <div className="sw-hud-gate">
             <div className="sw-ring"><span /></div>
-            <div className="sw-h" style={{ fontSize: 11, letterSpacing: '0.24em', textTransform: 'uppercase', color: 'var(--sw-white)' }}>Approve</div>
+            <div style={{ ...LABEL, letterSpacing: '0.26em', color: 'var(--ink)' }}>Approve</div>
           </div>
           <div className="sw-hud-card c2">
-            <div className="sw-h" style={{ ...TAG, color: 'var(--sw-indigo)' }}>Swarm 2 · Build</div>
+            <div style={{ ...LABEL, marginBottom: 8, color: 'var(--signal-ink)' }}>Swarm 02 / Build</div>
             <h4 className="sw-h" style={HUD_H4}>Assembles the parts</h4>
             <p style={HUD_P}>Only the pieces your workflow actually needs.</p>
           </div>
         </div>
-        <p className="sw-muted-2" style={{ marginTop: 22, textAlign: 'center', fontSize: 12, letterSpacing: '0.04em' }}>
-          Move your cursor through the swarm · scroll to dissolve
-        </p>
       </div>
 
       <div className={`sw-content${assembled ? ' sw-assembling' : ''}`}>
         <main id="main">
           {/* ── HERO ── */}
           <section ref={heroRef} className="sw-hero" aria-labelledby="hero-title">
-            <div className="sw-hero-glass glass">
-              <span className="sw-eyebrow">
+            <div className="sw-hero-glass">
+              {/* masthead rule */}
+              <div className="sw-masthead">
+                <span style={LABEL}>The workflow factory</span>
+                <span style={{ ...LABEL, color: 'var(--ink-faint)' }}>Fig. 001</span>
+              </div>
+              <span className="sw-eyebrow" style={{ marginBottom: 22 }}>
                 <span className="sw-spark" aria-hidden="true" />
-                The workflow factory
+                Two swarms, one outcome
               </span>
-              <h1 id="hero-title" className="sw-h sw-gradient">
+              <h1 id="hero-title" className="sw-h">
                 Describe it.<br />We build it.
               </h1>
-              <p className="sw-subhead">
-                Tell BoVerse the outcome you want and upload whatever you already have. Two AI
-                swarms infer the workflow and build it. You only review and approve.
-              </p>
-              <div className="sw-cta-row">
-                <Link className="sw-btn" href="/factory">Build a workflow</Link>
-                <button
-                  type="button"
-                  id="watch"
-                  className="sw-btn ghost"
-                  aria-pressed={assembled}
-                  onClick={toggleWatch}
-                >
-                  <span aria-hidden="true">{assembled ? '❚❚' : '▶'}</span>{' '}
-                  {assembled ? 'Dissolve' : 'Watch it build'}
-                </button>
+              <div className="sw-hero-grid">
+                <p className="sw-subhead">
+                  Tell BoVerse the outcome you want and upload whatever you already have. Two
+                  AI swarms infer the workflow and build it. You only review and approve.
+                </p>
+                <div className="sw-cta-row">
+                  <Link className="sw-btn" href="/factory">Build a workflow</Link>
+                  <button type="button" id="watch" className="sw-btn ghost" aria-pressed={assembled} onClick={toggleWatch}>
+                    {assembled ? 'Stop' : 'Watch it build'}
+                  </button>
+                </div>
               </div>
             </div>
             <div className="sw-scrollcue" aria-hidden="true">
@@ -165,19 +151,19 @@ export default function Page() {
           <section className="sw-panel sw-slab" aria-labelledby="why-title">
             <div className="sw-wrap">
               <Reveal>
-                <span className="sw-kicker">Why BoVerse</span>
+                <span className="sw-kicker">01 / Why BoVerse</span>
               </Reveal>
-              <Reveal delay={0.08}>
-                <h2 id="why-title" className="sw-h sw-gradient" style={{ fontSize: 'clamp(28px, 5.2vw, 52px)', maxWidth: '16ch', margin: '18px 0 24px' }}>
+              <Reveal delay={0.06}>
+                <h2 id="why-title" className="sw-h" style={{ fontSize: 'clamp(30px, 5.4vw, 60px)', maxWidth: '15ch', margin: '20px 0 28px' }}>
                   Your business runs on one person&apos;s instinct.
                 </h2>
               </Reveal>
-              <Reveal delay={0.16}>
-                <p className="sw-muted" style={{ fontSize: 'clamp(16px, 2.4vw, 20px)', maxWidth: '60ch', lineHeight: 1.7 }}>
+              <Reveal delay={0.12}>
+                <p className="sw-muted" style={{ fontSize: 'clamp(16px, 2.2vw, 21px)', maxWidth: '58ch', lineHeight: 1.65 }}>
                   The person who has priced your jobs for fifteen years carries the whole logic in
                   their head. It isn&apos;t written down, it doesn&apos;t survive a resignation, and it
                   never gets applied the same way twice.{' '}
-                  <strong style={{ color: 'var(--sw-white)', fontWeight: 600 }}>
+                  <strong style={{ color: 'var(--ink)', fontWeight: 600 }}>
                     BoVerse turns that know-how into a workflow you can actually run.
                   </strong>
                 </p>
@@ -189,31 +175,23 @@ export default function Page() {
           <section className="sw-panel" id="how" aria-labelledby="how-title">
             <div className="sw-wrap">
               <Reveal>
-                <span className="sw-kicker">How it works</span>
+                <span className="sw-kicker">02 / How it works</span>
               </Reveal>
-              <Reveal delay={0.08}>
-                <h2 id="how-title" className="sw-h sw-gradient" style={{ fontSize: 'clamp(28px, 5vw, 48px)', maxWidth: '18ch', margin: '18px 0 0' }}>
+              <Reveal delay={0.06}>
+                <h2 id="how-title" className="sw-h" style={{ fontSize: 'clamp(28px, 5vw, 52px)', maxWidth: '18ch', margin: '20px 0 0' }}>
                   Three steps. You stay in control of every one.
                 </h2>
               </Reveal>
               <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(var(--how-cols, 3), 1fr)',
-                  gap: 18,
-                  marginTop: 48,
-                }}
                 className="sw-how-grid"
+                style={{ display: 'grid', gridTemplateColumns: 'repeat(var(--how-cols, 3), 1fr)', gap: 1, marginTop: 52, background: 'var(--rule-2)', border: '1px solid var(--rule-2)' }}
               >
                 {STEPS.map((s, i) => (
-                  <Reveal key={s.num} delay={0.08 * (i + 1)}>
-                    <article className="sw-step" style={{ height: '100%' }}>
-                      <div style={{ fontFamily: 'var(--font-space-grotesk), sans-serif', fontSize: 12, fontWeight: 700, letterSpacing: '0.22em', color: 'var(--sw-cyan)', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 14 }}>
-                        <span aria-hidden="true" style={{ fontSize: 42, fontWeight: 700, color: 'rgba(140,165,255,0.16)', lineHeight: 1 }}>{s.num}</span>
-                        Step
-                      </div>
-                      <h3 className="sw-h" style={{ fontSize: 21, marginBottom: 10, letterSpacing: '0.01em' }}>{s.title}</h3>
-                      <p className="sw-muted" style={{ fontSize: 14.5, margin: 0 }}>{s.body}</p>
+                  <Reveal key={s.num} delay={0.06 * (i + 1)}>
+                    <article className="sw-step" style={{ height: '100%', border: 0, borderRadius: 0 }}>
+                      <div className="sw-step-index" aria-hidden="true">{s.num}</div>
+                      <h3 className="sw-h" style={{ fontSize: 22, margin: '0 0 10px' }}>{s.title}</h3>
+                      <p className="sw-muted" style={{ fontSize: 14.5, margin: 0, lineHeight: 1.6 }}>{s.body}</p>
                     </article>
                   </Reveal>
                 ))}
@@ -225,43 +203,41 @@ export default function Page() {
           <section className="sw-panel sw-slab" aria-labelledby="swarms-title">
             <div className="sw-wrap">
               <Reveal>
-                <span className="sw-kicker">Under the hood</span>
+                <span className="sw-kicker">03 / Under the hood</span>
               </Reveal>
-              <Reveal delay={0.08}>
-                <p id="swarms-title" className="sw-h" style={{ fontSize: 'clamp(18px, 3vw, 26px)', color: 'var(--sw-white)', maxWidth: '30ch', margin: '18px 0 44px', lineHeight: 1.4, fontWeight: 500 }}>
-                  Behind those three steps, two swarms of AI agents do the work.
+              <Reveal delay={0.06}>
+                <p id="swarms-title" className="sw-h" style={{ fontSize: 'clamp(20px, 3vw, 30px)', color: 'var(--ink)', maxWidth: '28ch', margin: '20px 0 48px', lineHeight: 1.25, fontWeight: 600 }}>
+                  Behind those three steps, two swarms of agents do the work.
                 </p>
               </Reveal>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(var(--swarm-cols, 2), 1fr)', gap: 20 }} className="sw-swarm-grid">
-                <Reveal delay={0.08}>
-                  <article className="sw-card" style={{ height: '100%', padding: '34px 32px 32px', display: 'flex', flexDirection: 'column' }}>
-                    <span className="sw-orb cyan" aria-hidden="true" />
-                    <span className="sw-badge" style={{ color: 'var(--sw-cyan)', marginBottom: 20 }}>
-                      <span className="sw-mini cyan" aria-hidden="true" />
-                      Swarm 1 · Discovery
+              <div className="sw-swarm-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(var(--swarm-cols, 2), 1fr)', gap: 20 }}>
+                <Reveal delay={0.06}>
+                  <article className="sw-card" style={{ height: '100%', padding: '32px 30px 30px', display: 'flex', flexDirection: 'column' }}>
+                    <span className="sw-badge" style={{ marginBottom: 22 }}>
+                      <span className="sw-mini indigo" aria-hidden="true" />
+                      Swarm 01 / Discovery
                     </span>
-                    <h3 className="sw-h" style={{ fontSize: 23, marginBottom: 12 }}>Figures out what to build.</h3>
+                    <h3 className="sw-h" style={{ fontSize: 24, marginBottom: 12 }}>Figures out what to build.</h3>
                     <p className="sw-muted" style={{ fontSize: 15, margin: 0, lineHeight: 1.65 }}>
                       Reads your evidence, infers the workflow, and shows you a sample to approve.
                     </p>
-                    <span style={{ marginTop: 'auto', paddingTop: 22, fontSize: 12.5, color: 'var(--sw-cyan)', fontFamily: 'var(--font-space-grotesk), sans-serif', letterSpacing: '0.05em', display: 'inline-flex', alignItems: 'center', gap: 8, borderTop: '1px solid var(--sw-line)' }}>
-                      <span className="sw-mini cyan" aria-hidden="true" /> The only swarm you talk to.
+                    <span className="sw-card-foot" style={{ borderTop: '1px solid var(--rule)' }}>
+                      <span className="sw-mini indigo" aria-hidden="true" /> The only swarm you talk to.
                     </span>
                   </article>
                 </Reveal>
-                <Reveal delay={0.16}>
-                  <article className="sw-card" style={{ height: '100%', padding: '34px 32px 32px', display: 'flex', flexDirection: 'column' }}>
-                    <span className="sw-orb indigo" aria-hidden="true" />
-                    <span className="sw-badge" style={{ color: 'var(--sw-indigo)', marginBottom: 20 }}>
-                      <span className="sw-mini indigo" aria-hidden="true" />
-                      Swarm 2 · Build
+                <Reveal delay={0.12}>
+                  <article className="sw-card" style={{ height: '100%', padding: '32px 30px 30px', display: 'flex', flexDirection: 'column' }}>
+                    <span className="sw-badge" style={{ marginBottom: 22, color: 'var(--signal-ink)', borderColor: 'var(--signal)' }}>
+                      <span className="sw-mini cyan" aria-hidden="true" />
+                      Swarm 02 / Build
                     </span>
-                    <h3 className="sw-h" style={{ fontSize: 23, marginBottom: 12 }}>Builds it — and only it.</h3>
+                    <h3 className="sw-h" style={{ fontSize: 24, marginBottom: 12 }}>Builds it — and only it.</h3>
                     <p className="sw-muted" style={{ fontSize: 15, margin: 0, lineHeight: 1.65 }}>
                       Assembles only the parts your workflow needs, and refuses the parts it doesn&apos;t.
                     </p>
-                    <span style={{ marginTop: 'auto', paddingTop: 22, fontSize: 12.5, color: 'var(--sw-indigo)', fontFamily: 'var(--font-space-grotesk), sans-serif', letterSpacing: '0.05em', display: 'inline-flex', alignItems: 'center', gap: 8, borderTop: '1px solid var(--sw-line)' }}>
-                      <span className="sw-mini indigo" aria-hidden="true" /> The swarm you never see.
+                    <span className="sw-card-foot" style={{ borderTop: '1px solid var(--rule)', color: 'var(--signal-ink)' }}>
+                      <span className="sw-mini cyan" aria-hidden="true" /> The swarm you never see.
                     </span>
                   </article>
                 </Reveal>
@@ -269,27 +245,19 @@ export default function Page() {
             </div>
           </section>
 
-          {/* ── FINAL CTA ── */}
-          <section className="sw-panel" id="build" aria-labelledby="final-title" style={{ textAlign: 'center' }}>
+          {/* ── FINAL CTA ── inverted ink slab for a confident close ── */}
+          <section className="sw-panel" id="build" aria-labelledby="final-title">
             <div className="sw-wrap">
               <Reveal>
-                <div
-                  className="glass"
-                  style={{
-                    maxWidth: 720,
-                    margin: '0 auto',
-                    padding: 'clamp(40px, 7vw, 72px) clamp(24px, 5vw, 56px)',
-                    background:
-                      'radial-gradient(600px 300px at 50% -10%, rgba(56,225,255,0.1), transparent 60%), linear-gradient(180deg, rgba(14,19,38,0.7), rgba(8,11,22,0.7))',
-                  }}
-                >
-                  <h2 id="final-title" className="sw-h sw-gradient" style={{ fontSize: 'clamp(28px, 5.4vw, 54px)', marginBottom: 18 }}>
-                    Hand us what you have.<br />We&apos;ll build the workflow.
+                <div className="sw-cta-slab">
+                  <span style={{ ...LABEL, color: 'rgba(241,236,225,0.6)' }}>Start here</span>
+                  <h2 id="final-title" className="sw-h" style={{ fontSize: 'clamp(30px, 6vw, 66px)', margin: '18px 0 18px', color: 'var(--paper)', maxWidth: '16ch' }}>
+                    Hand us what you have.
                   </h2>
-                  <p className="sw-muted" style={{ fontSize: 'clamp(15px, 2.3vw, 18px)', maxWidth: '50ch', margin: '0 auto 30px' }}>
+                  <p style={{ fontSize: 'clamp(15px, 2.2vw, 18px)', color: 'rgba(241,236,225,0.72)', maxWidth: '46ch', margin: '0 0 30px', lineHeight: 1.6 }}>
                     A sample of the result and a couple of examples is enough to start.
                   </p>
-                  <Link className="sw-btn" href="/factory">Build a workflow</Link>
+                  <Link className="sw-btn invert" href="/factory">Build a workflow</Link>
                 </div>
               </Reveal>
             </div>
@@ -298,12 +266,59 @@ export default function Page() {
 
         <SiteFooter />
       </div>
+
+      {/* Home-only leaf styles (editorial details that don't belong in the kit). */}
+      <style jsx>{`
+        .sw-masthead {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          border-top: 1px solid var(--ink);
+          padding-top: 14px;
+          margin-bottom: clamp(28px, 6vh, 60px);
+        }
+        .sw-hero-grid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 28px;
+          margin-top: clamp(28px, 5vh, 48px);
+          align-items: end;
+        }
+        @media (min-width: 880px) {
+          .sw-hero-grid { grid-template-columns: 1.1fr 1fr; gap: 56px; }
+        }
+        .sw-step-index {
+          font-family: var(--font-bricolage), sans-serif;
+          font-size: 44px;
+          font-weight: 700;
+          line-height: 1;
+          color: var(--ink);
+          opacity: 0.14;
+          margin-bottom: 18px;
+        }
+        .sw-card-foot {
+          margin-top: auto;
+          padding-top: 22px;
+          display: inline-flex;
+          align-items: center;
+          gap: 9px;
+          font-family: var(--font-geist-mono), monospace;
+          font-size: 11.5px;
+          letter-spacing: 0.04em;
+          color: var(--ink-dim);
+        }
+        .sw-cta-slab {
+          background: var(--ink);
+          padding: clamp(40px, 7vw, 88px) clamp(26px, 5vw, 72px);
+          border-radius: 3px;
+        }
+      `}</style>
     </>
   );
 }
 
 const STEPS = [
   { num: '01', title: 'Describe', body: 'Say what you want, and upload whatever you already have.' },
-  { num: '02', title: 'Review', body: 'We show you a sample of the finished work and the inputs behind it. Comment or change anything.' },
-  { num: '03', title: 'Build', body: 'Approve, and we build the workflow, only the pieces it actually needs.' },
+  { num: '02', title: 'Review', body: 'See a sample of the finished work and the inputs behind it. Comment or change anything.' },
+  { num: '03', title: 'Build', body: 'Approve, and we build the workflow — only the pieces it actually needs.' },
 ] as const;

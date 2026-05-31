@@ -4,8 +4,8 @@
 // outcome, uploads evidence, answers a few questions, then reviews ONLY two
 // things: a sample OUTPUT and a sample-INPUTS pack. They comment / edit inputs
 // and approve. All machinery (canonical store, archetype, rules) is hidden
-// behind the OPERATOR drawer. Aesthetic: Living Swarm — deep space-black,
-// frosted glass, cyan/indigo glow, pill buttons.
+// behind the OPERATOR drawer. Aesthetic: Editorial Paper — warm paper ground,
+// ink type, hairline rules, one vermilion signal, square corners.
 
 import { Fragment, useCallback, useMemo, useRef, useState } from 'react';
 import SwarmCanvas from '@/components/swarm/swarm-canvas';
@@ -29,12 +29,12 @@ interface SampleInput { input_name: string; input_type: string; format: string; 
 interface SampleOutput { output_name: string; output_type: string; output_format: string; required_sections: string[]; rendered_sample: string; computed_fields: Record<string, unknown> }
 interface WdsSummary { primary_archetype: string; complexity: string; overall_confidence: number; required_components: string[]; unnecessary_components: string[] }
 
-// Severity → swarm-palette accent (style only). amber = edge/critical, indigo = secondary, muted = low.
+// Severity → editorial accent (style only). vermilion-ink = critical/high, ink = medium, faint = low.
 const SEV_COLOR: Record<string, string> = {
-  critical: '#ffb020',
-  high: '#ffb020',
-  medium: '#6e8bff',
-  low: '#6c779b',
+  critical: '#c0341f',
+  high: '#c0341f',
+  medium: 'var(--ink)',
+  low: 'var(--ink-faint)',
 };
 
 export default function FactoryPage() {
@@ -194,7 +194,7 @@ export default function FactoryPage() {
           {/* eyebrow */}
           <span className="sw-eyebrow mb-6">
             <span className="sw-spark" aria-hidden="true" />
-            Factory · 001
+            Factory / 001
           </span>
 
           <h1 className="sw-h sw-gradient text-4xl lg:text-6xl mb-5">Describe. Upload. Approve.</h1>
@@ -221,17 +221,17 @@ export default function FactoryPage() {
 
           {/* progress / status line */}
           {status && phase !== 'error' && (
-            <div className="sw-kicker mb-6" style={{ color: 'var(--sw-cyan)' }} aria-live="polite">{status}</div>
+            <div className="sw-kicker mb-6" style={{ color: 'var(--signal-ink)' }} aria-live="polite">{status}</div>
           )}
           {error && (
-            <div role="alert" className="text-xs p-3.5 mb-6 rounded-2xl" style={{ color: '#ff9a9a', border: '1px solid rgba(255,120,120,0.5)', background: 'rgba(255,80,80,0.06)' }}>{error}</div>
+            <div role="alert" className="text-xs p-3.5 mb-6" style={{ color: 'var(--ink)', borderLeft: '2px solid var(--signal)', background: 'var(--paper-2)', borderRadius: 2 }}>{error}</div>
           )}
 
           {/* ── INTAKE ── */}
           {phase === 'intake' && (
             <div className="space-y-6">
               <div>
-                <label htmlFor="outcome" className="sw-kicker mb-3">Outcome · what do you want?</label>
+                <label htmlFor="outcome" className="sw-kicker mb-3">Outcome / what do you want?</label>
                 <textarea id="outcome" value={outcome} onChange={(e) => setOutcome(e.target.value)} rows={3}
                   placeholder="e.g. Turn an inbound brief into a priced proposal in minutes."
                   className="sw-field w-full text-sm p-3.5" />
@@ -241,24 +241,24 @@ export default function FactoryPage() {
                 onDragLeave={() => setDragging(false)}
                 onDrop={(e) => { e.preventDefault(); setDragging(false); addFiles(e.dataTransfer.files); }}
                 className="glass p-8 text-center transition-colors"
-                style={{ borderStyle: 'dashed', borderColor: dragging ? 'var(--sw-cyan)' : 'var(--sw-glass-edge)', background: dragging ? 'rgba(56,225,255,0.06)' : 'var(--sw-glass)' }}
+                style={{ borderStyle: 'dashed', borderColor: dragging ? 'var(--signal)' : 'var(--rule-2)', background: dragging ? 'var(--paper-3)' : 'var(--paper-2)' }}
               >
-                <div className="sw-kicker mb-3 justify-center">Evidence · drop files</div>
+                <div className="sw-kicker mb-3 justify-center">Evidence / drop files</div>
                 <p className="sw-muted text-xs mb-4">Notes, SOPs, spreadsheets, sample outputs, exports, screenshots.</p>
                 <button onClick={() => fileRef.current?.click()} className="sw-btn ghost sm">Browse</button>
                 <input ref={fileRef} type="file" multiple className="hidden" onChange={(e) => addFiles(e.target.files)} />
               </div>
               {files.length > 0 && (
-                <ul className="sw-card divide-y" style={{ borderColor: 'var(--sw-line)' }}>
+                <ul className="sw-card divide-y" style={{ borderColor: 'var(--rule)' }}>
                   {files.map((f, i) => (
-                    <li key={f.name + i} className="flex items-center justify-between px-4 py-2.5 text-xs" style={{ borderColor: 'var(--sw-line)' }}>
+                    <li key={f.name + i} className="flex items-center justify-between px-4 py-2.5 text-xs" style={{ borderColor: 'var(--rule)' }}>
                       <span className="sw-muted sw-mono">{f.name}</span>
-                      <button aria-label={`remove ${f.name}`} onClick={() => setFiles((p) => p.filter((_, j) => j !== i))} className="sw-muted-2 transition-colors hover:text-[#ffb020]">×</button>
+                      <button aria-label={`remove ${f.name}`} onClick={() => setFiles((p) => p.filter((_, j) => j !== i))} className="sw-muted-2 transition-colors hover:text-[var(--signal-ink)]">×</button>
                     </li>
                   ))}
                 </ul>
               )}
-              <button onClick={discover} disabled={busy} className="sw-btn">{busy ? 'Working…' : 'Discover →'}</button>
+              <button onClick={discover} disabled={busy} className="sw-btn">{busy ? 'Working…' : 'Discover'}</button>
             </div>
           )}
 
@@ -270,16 +270,16 @@ export default function FactoryPage() {
                 <div key={q.gap_id} className="glass p-5">
                   <div className="flex items-center gap-2 mb-3">
                     <span className="sw-badge" style={{ borderColor: SEV_COLOR[q.severity] ?? SEV_COLOR.low, color: SEV_COLOR[q.severity] ?? SEV_COLOR.low }}>
-                      <span className="sw-mini" style={{ background: SEV_COLOR[q.severity] ?? SEV_COLOR.low, boxShadow: `0 0 10px ${SEV_COLOR[q.severity] ?? SEV_COLOR.low}` }} />
+                      <span className="sw-mini" style={{ background: SEV_COLOR[q.severity] ?? SEV_COLOR.low }} />
                       {q.severity.toUpperCase()}
                     </span>
                   </div>
-                  <p className="text-sm mb-3" style={{ color: 'var(--sw-white)' }}>{q.suggested_question}</p>
+                  <p className="text-sm mb-3" style={{ color: 'var(--ink)' }}>{q.suggested_question}</p>
                   <input value={answers[q.gap_id] ?? ''} onChange={(e) => setAnswers((a) => ({ ...a, [q.gap_id]: e.target.value }))}
                     className="sw-field w-full text-sm p-2.5" />
                 </div>
               ))}
-              <button onClick={submitAnswers} disabled={busy} className="sw-btn">{busy ? 'Working…' : 'Submit →'}</button>
+              <button onClick={submitAnswers} disabled={busy} className="sw-btn">{busy ? 'Working…' : 'Submit'}</button>
             </div>
           )}
 
@@ -287,16 +287,16 @@ export default function FactoryPage() {
           {phase === 'review' && sampleOutput && (
             <div className="space-y-10">
               <section>
-                <div className="sw-kicker mb-3">Sample output · {sampleOutput.output_name.toUpperCase()}</div>
+                <div className="sw-kicker mb-3">Sample output / {sampleOutput.output_name.toUpperCase()}</div>
                 <div className="glass p-5 lg:p-6">
-                  <pre className="sw-mono whitespace-pre-wrap text-xs lg:text-sm leading-relaxed" style={{ color: 'var(--sw-white)' }}>{sampleOutput.rendered_sample}</pre>
+                  <pre className="sw-mono whitespace-pre-wrap text-xs lg:text-sm leading-relaxed" style={{ color: 'var(--ink)' }}>{sampleOutput.rendered_sample}</pre>
                 </div>
                 {computed.length > 0 && (
-                  <div className="sw-card mt-3 divide-y" style={{ borderColor: 'var(--sw-line)' }}>
+                  <div className="sw-card mt-3 divide-y" style={{ borderColor: 'var(--rule)' }}>
                     {computed.map(([k, v]) => (
-                      <div key={k} className="grid grid-cols-2 gap-3 px-4 py-2.5 text-xs" style={{ borderColor: 'var(--sw-line)' }}>
+                      <div key={k} className="grid grid-cols-2 gap-3 px-4 py-2.5 text-xs" style={{ borderColor: 'var(--rule)' }}>
                         <span className="sw-muted-2 sw-mono">{k}</span>
-                        <span className="sw-mono text-right" style={{ color: 'var(--sw-white)' }}>{String(v)}</span>
+                        <span className="sw-mono text-right" style={{ color: 'var(--ink)' }}>{String(v)}</span>
                       </div>
                     ))}
                   </div>
@@ -304,20 +304,20 @@ export default function FactoryPage() {
               </section>
 
               <section>
-                <div className="sw-kicker mb-3">Sample inputs · edit any value to re-render</div>
+                <div className="sw-kicker mb-3">Sample inputs</div>
                 {sampleInputs.length === 0 && (
                   <div className="sw-card" style={{ padding: '18px 20px' }}>
                     <p className="sw-muted text-sm" style={{ margin: 0 }}>
-                      No per-run inputs to configure — this workflow is driven directly by the evidence you provided. Add a comment below if something here should become an editable input.
+                      No per-run inputs to configure — this workflow is driven directly by the evidence you provided.
                     </p>
                   </div>
                 )}
                 <div className="space-y-3">
                   {sampleInputs.map((si) => (
                     <details key={si.input_name} className="sw-card">
-                      <summary className="cursor-pointer px-4 py-3.5 text-sm flex items-center justify-between" style={{ color: 'var(--sw-white)' }}>
+                      <summary className="cursor-pointer px-4 py-3.5 text-sm flex items-center justify-between" style={{ color: 'var(--ink)' }}>
                         <span>{si.input_name}</span>
-                        <span className="sw-mono text-[10px] tracking-widest sw-muted-2">{si.input_type} · {si.format}</span>
+                        <span className="sw-mono text-[10px] tracking-widest sw-muted-2">{si.input_type} / {si.format}</span>
                       </summary>
                       <div className="px-4 pb-4">
                         <pre className="sw-mono whitespace-pre-wrap text-[11px] sw-muted mb-3">{si.rendered}</pre>
@@ -334,13 +334,12 @@ export default function FactoryPage() {
                   placeholder="Anything look off? e.g. &quot;the rush fee looks too low&quot;"
                   className="sw-field w-full text-sm p-3.5" />
                 <div>
-                  <button onClick={() => sendComment('output')} className="sw-btn ghost sm">Comment →</button>
+                  <button onClick={() => sendComment('output')} className="sw-btn ghost sm">Comment</button>
                 </div>
               </section>
 
               <div className="flex flex-wrap items-center gap-4">
-                <button onClick={approve} disabled={busy} className="sw-btn">{busy ? 'Approving…' : 'Approve →'}</button>
-                <span className="sw-muted-2 text-xs">Approval releases the build.</span>
+                <button onClick={approve} disabled={busy} className="sw-btn">{busy ? 'Approving…' : 'Approve'}</button>
               </div>
 
               {wds && <OperatorDrawer wds={wds} />}
@@ -351,12 +350,12 @@ export default function FactoryPage() {
           {phase === 'approved' && (
             error ? (
               <div className="glass mx-auto" style={{ maxWidth: 520, padding: 'clamp(30px,5vw,44px)', textAlign: 'center' }}>
-                <div className="sw-badge mx-auto mb-4" style={{ borderColor: 'rgba(255,138,128,0.45)', color: '#ff9a8a' }}>
-                  <span className="sw-mini" style={{ background: '#ff8a80', boxShadow: '0 0 10px #ff8a80' }} aria-hidden="true" />
+                <div className="sw-badge mx-auto mb-4" style={{ borderColor: 'var(--signal)', color: 'var(--signal-ink)' }}>
+                  <span className="sw-mini" style={{ background: 'var(--signal)' }} aria-hidden="true" />
                   BUILD FAILED
                 </div>
                 <p className="sw-muted text-sm mb-5" role="alert">{error}</p>
-                <button onClick={approve} disabled={busy} className="sw-btn ghost sm">Retry build →</button>
+                <button onClick={approve} disabled={busy} className="sw-btn ghost sm">Retry build</button>
               </div>
             ) : (
               <div className="glass mx-auto" style={{ maxWidth: 520, padding: 'clamp(36px,6vw,56px)', textAlign: 'center' }}>
@@ -365,7 +364,7 @@ export default function FactoryPage() {
                   <i className="b" />
                   <span />
                 </div>
-                <div className="sw-kicker justify-center mb-3" style={{ color: 'var(--sw-indigo)' }}>Swarm 2 · Build</div>
+                <div className="sw-kicker justify-center mb-3" style={{ color: 'var(--ink)' }}>Swarm 2 / Build</div>
                 <h2 className="sw-h sw-gradient" style={{ fontSize: 'clamp(22px,3.6vw,30px)', marginBottom: 12 }}>Assembling your workflow</h2>
                 <p className="sw-muted text-sm mx-auto" style={{ maxWidth: '34ch' }} aria-live="polite">
                   {status || 'Building only the objects your workflow needs, and refusing the rest.'}
@@ -375,28 +374,26 @@ export default function FactoryPage() {
           )}
 
           {phase === 'error' && (
-            <button onClick={() => { setPhase('intake'); setError(''); }} className="sw-btn ghost sm">← Start over</button>
+            <button onClick={() => { setPhase('intake'); setError(''); }} className="sw-btn ghost sm">Start over</button>
           )}
         </div>
       </div>
 
-      {/* Dark-glass field treatment: transparent bg, glass edge, cyan focus. */}
+      {/* Editorial field treatment: paper bg, hairline rule, crisp vermilion focus ring. */}
       <style jsx>{`
         .sw-field {
-          background: rgba(8, 12, 24, 0.45);
-          border: 1px solid var(--sw-glass-edge);
-          border-radius: 14px;
-          color: var(--sw-white);
+          background: var(--paper);
+          border: 1px solid var(--rule-2);
+          border-radius: 2px;
+          color: var(--ink);
           outline: none;
-          backdrop-filter: blur(8px);
-          -webkit-backdrop-filter: blur(8px);
-          transition: border-color 0.25s var(--sw-ease), box-shadow 0.25s var(--sw-ease);
+          transition: border-color 0.2s var(--sw-ease), box-shadow 0.2s var(--sw-ease);
         }
-        .sw-field::placeholder { color: var(--sw-muted-2); }
+        .sw-field::placeholder { color: var(--ink-faint); }
         .sw-field:focus,
         .sw-field:focus-visible {
-          border-color: var(--sw-cyan);
-          box-shadow: 0 0 0 1px rgba(56, 225, 255, 0.4), 0 0 30px rgba(56, 225, 255, 0.12);
+          border-color: var(--signal);
+          box-shadow: 0 0 0 1px var(--signal);
         }
       `}</style>
     </main>
@@ -411,21 +408,21 @@ function InputEditor({ input, onSave }: { input: SampleInput; onSave: (i: Sample
       <textarea value={raw} onChange={(e) => setRaw(e.target.value)} rows={5}
         className="sw-ed sw-mono w-full p-2.5 text-[11px]" />
       <div>
-        <button onClick={() => onSave(input, raw)} className="sw-btn ghost sm mt-2">Re-render →</button>
+        <button onClick={() => onSave(input, raw)} className="sw-btn ghost sm mt-2">Re-render</button>
       </div>
       <style jsx>{`
         .sw-ed {
-          background: rgba(8, 12, 24, 0.55);
-          border: 1px solid var(--sw-line);
-          border-radius: 12px;
-          color: var(--sw-white);
+          background: var(--paper);
+          border: 1px solid var(--rule-2);
+          border-radius: 2px;
+          color: var(--ink);
           outline: none;
-          transition: border-color 0.25s var(--sw-ease), box-shadow 0.25s var(--sw-ease);
+          transition: border-color 0.2s var(--sw-ease), box-shadow 0.2s var(--sw-ease);
         }
         .sw-ed:focus,
         .sw-ed:focus-visible {
-          border-color: var(--sw-cyan);
-          box-shadow: 0 0 0 1px rgba(56, 225, 255, 0.35);
+          border-color: var(--signal);
+          box-shadow: 0 0 0 1px var(--signal);
         }
       `}</style>
     </div>
@@ -435,10 +432,10 @@ function InputEditor({ input, onSave }: { input: SampleInput; onSave: (i: Sample
 function OperatorDrawer({ wds }: { wds: WdsSummary }) {
   return (
     <details className="sw-card mt-4">
-      <summary className="cursor-pointer px-4 py-3.5 text-[11px] tracking-widest sw-muted-2 sw-mono">OPERATOR · INTERNALS</summary>
+      <summary className="cursor-pointer px-4 py-3.5 text-[11px] tracking-widest sw-muted-2 sw-mono">Operator / Internals</summary>
       <div className="px-4 pb-4 text-xs sw-muted space-y-2">
-        <div>archetype: <span style={{ color: 'var(--sw-white)' }}>{wds.primary_archetype}</span> · complexity: {wds.complexity} · confidence: {(wds.overall_confidence * 100).toFixed(0)}%</div>
-        <div>build: <span style={{ color: 'var(--sw-white)' }}>{wds.required_components.join(', ')}</span></div>
+        <div>archetype: <span style={{ color: 'var(--ink)' }}>{wds.primary_archetype}</span> / complexity: {wds.complexity} / confidence: {(wds.overall_confidence * 100).toFixed(0)}%</div>
+        <div>build: <span style={{ color: 'var(--ink)' }}>{wds.required_components.join(', ')}</span></div>
         <div className="sw-muted-2">refused: {wds.unnecessary_components.join(', ') || '—'}</div>
       </div>
     </details>

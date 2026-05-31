@@ -1,7 +1,8 @@
 import Link from 'next/link';
 
-// Shared Living Swarm header. Fixed glass bar: brand + "How it works" + the
-// Build Workflow pill. Used on every page so the chrome is consistent.
+// Shared Editorial Paper header. Fixed paper bar with a hairline rule: brand +
+// "How it works" + the Build Workflow button. Used on every page so the chrome
+// is consistent.
 export default function SiteHeader() {
   return (
     <header className="sw-header">

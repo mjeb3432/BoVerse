@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-// Shared Living Swarm footer.
+// Shared Editorial Paper footer.
 export default function SiteFooter() {
   return (
     <footer className="sw-footer">
