@@ -91,6 +91,13 @@ export default function Page() {
       <SwarmCanvas assembled={assembled} dim={dim} />
       <SiteHeader />
 
+      {/* Scroll cue while the build is "live" — replaces the hero cue so the user
+          knows the demo dissolves on scroll instead of being stuck on this view. */}
+      <div className={`sw-hud-scrollcue${assembled && dim > 0.86 ? ' show' : ''}`} aria-hidden="true">
+        <span className="sw-mouse" />
+        Scroll to disperse
+      </div>
+
       {/* Live build diagram — fades in while the swarm assembles into the pipeline */}
       <div className={`sw-hud${assembled ? ' show' : ''}`} aria-hidden="true">
         <div className="sw-hud-grid">
@@ -100,8 +107,37 @@ export default function Page() {
             <p style={HUD_P}>Reads your evidence and shows a sample to approve.</p>
           </div>
           <div className="sw-hud-gate">
-            <div className="sw-ring"><span /></div>
-            <div style={{ ...LABEL, letterSpacing: '0.26em', color: 'var(--ink)' }}>Approve</div>
+            <svg className="sw-net" viewBox="0 0 200 110" aria-hidden="true">
+              {/* INPUT WIRES — three lines from Phase 1 converging on the junction */}
+              <g className="sw-net-wires">
+                <path d="M0 20 L60 20 L92 55" />
+                <path d="M0 55 L92 55" />
+                <path d="M0 90 L60 90 L92 55" />
+                {/* OUTPUT WIRES — three lines diverging to Phase 2 */}
+                <path d="M108 55 L140 20 L200 20" />
+                <path d="M108 55 L200 55" />
+                <path d="M108 55 L140 90 L200 90" />
+              </g>
+              {/* ENDPOINT DIAMONDS — editorial tilted-square primitive */}
+              <g className="sw-net-ends">
+                <rect width="6" height="6" x="-3" y="17" transform="rotate(45 0 20)" />
+                <rect width="6" height="6" x="-3" y="52" transform="rotate(45 0 55)" />
+                <rect width="6" height="6" x="-3" y="87" transform="rotate(45 0 90)" />
+                <rect width="6" height="6" x="197" y="17" transform="rotate(45 200 20)" />
+                <rect width="6" height="6" x="197" y="52" transform="rotate(45 200 55)" />
+                <rect width="6" height="6" x="197" y="87" transform="rotate(45 200 90)" />
+              </g>
+              {/* CENTRAL JUNCTION — concentric hairline rings + vermilion diamond */}
+              <g className="sw-net-junction">
+                <circle cx="100" cy="55" r="17" />
+                <circle cx="100" cy="55" r="10" />
+                <rect className="sw-net-diamond" x="95" y="50" width="10" height="10" transform="rotate(45 100 55)" />
+              </g>
+              {/* TRAVELLING PULSES — staggered, suggesting data flow left → junction → right */}
+              <g className="sw-net-pulse a"><circle r="2" cx="0" cy="55" /></g>
+              <g className="sw-net-pulse b"><circle r="2" cx="0" cy="55" /></g>
+            </svg>
+            <span className="sw-net-label">Approve</span>
           </div>
           <div className="sw-hud-card c2">
             <div style={{ ...LABEL, marginBottom: 8, color: 'var(--signal-ink)' }}>Swarm 02 / Build</div>
@@ -257,7 +293,7 @@ export default function Page() {
                   <p style={{ fontSize: 'clamp(15px, 2.2vw, 18px)', color: 'rgba(241,236,225,0.72)', maxWidth: '46ch', margin: '0 0 30px', lineHeight: 1.6 }}>
                     A sample of the result and a couple of examples is enough to start.
                   </p>
-                  <Link className="sw-btn invert" href="/factory">Build a workflow</Link>
+                  <Link className="sw-btn inverse" href="/factory">Build a workflow</Link>
                 </div>
               </Reveal>
             </div>
