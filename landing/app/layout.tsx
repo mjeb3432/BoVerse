@@ -1,30 +1,34 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Space_Grotesk, Inter, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const spaceGrotesk = Space_Grotesk({
+  variable: "--font-space-grotesk",
   subsets: ["latin"],
 });
-
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+});
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
-  title: "BoVerse · Atomic Workflows",
-  description: "Where artifacts become workflows. Five primitives. Infinite forms. BoVerse turns the expert in your team's head into a workflow that runs every time.",
+  title: "BoVerse · Describe it. We build it.",
+  description:
+    "Tell BoVerse the outcome you want and upload whatever you already have. Two AI swarms infer the workflow and build it. You only review and approve.",
   openGraph: {
-    title: "BoVerse · Atomic Workflows",
-    description: "Where artifacts become workflows. Five primitives. Infinite forms.",
+    title: "BoVerse · Describe it. We build it.",
+    description: "The workflow factory. Two AI swarms infer your workflow and build it.",
     siteName: "BoVerse",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "BoVerse · Atomic Workflows",
-    description: "Where artifacts become workflows. Five primitives. Infinite forms.",
+    title: "BoVerse · Describe it. We build it.",
+    description: "The workflow factory. Two AI swarms infer your workflow and build it.",
   },
 };
 
@@ -36,15 +40,15 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${spaceGrotesk.variable} ${inter.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-black text-white">
+      <body className="sw min-h-full flex flex-col">
         {/* Skip link for keyboard / screen reader users */}
         <a
           href="#main"
-          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-white focus:text-black focus:font-mono focus:text-xs focus:tracking-widest focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-black"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-white focus:text-black focus:text-xs focus:tracking-widest focus:rounded focus:outline-none focus:ring-2 focus:ring-[#38e1ff]"
         >
-          SKIP TO MAIN CONTENT
+          Skip to main content
         </a>
         {children}
       </body>
