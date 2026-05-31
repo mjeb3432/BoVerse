@@ -1,8 +1,9 @@
 'use client';
 
 // BoVerse home — editorial paper. A boids canvas (ink on paper) self-assembles
-// into the two-swarm pipeline while a build diagram fades in. Scroll past the
-// hero (or press "Watch it build") to trigger it; scroll on to dissolve.
+// into the two-swarm pipeline while a build diagram fades in. Only the
+// "Watch it build" button triggers the assembly; scrolling past the hero
+// dissolves it back so the page reads as normal editorial content.
 //
 // The page only orchestrates state (assembled / dim) + the scroll listener; all
 // visuals come from the editorial system in globals.css (SwarmCanvas, Reveal,
@@ -57,8 +58,10 @@ export default function Page() {
       const vh = window.innerHeight;
       const heroBottom = hero ? hero.getBoundingClientRect().bottom : vh - y;
       const heroVisible = Math.max(0, Math.min(1, heroBottom / vh));
-      const wantAssembled = y > vh * 0.12 && heroVisible > 0.55;
-      if (wantAssembled !== assembledRef.current) setAssembled(wantAssembled);
+      // Scroll never auto-assembles — that's the "Watch it build" button's job.
+      // But if the user has assembled it and then scrolls past the hero, let
+      // the page disperse so they can read the editorial content underneath.
+      if (assembledRef.current && heroVisible <= 0.55) setAssembled(false);
       setDim(0.32 + 0.68 * heroVisible);
     };
 
