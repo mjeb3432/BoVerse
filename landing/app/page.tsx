@@ -208,11 +208,11 @@ export default function Page() {
                 {STEPS.map((s, i) => (
                   <Reveal key={s.num} delay={0.08 * (i + 1)}>
                     <article className="sw-step" style={{ height: '100%' }}>
-                      <div style={{ fontFamily: 'var(--font-space-grotesk), sans-serif', fontSize: 13, fontWeight: 700, letterSpacing: '0.2em', color: 'var(--sw-cyan)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <span aria-hidden="true" style={{ fontSize: 40, fontWeight: 700, color: 'rgba(140,165,255,0.16)', lineHeight: 1 }}>{s.num}</span>
-                        {s.title}
+                      <div style={{ fontFamily: 'var(--font-space-grotesk), sans-serif', fontSize: 12, fontWeight: 700, letterSpacing: '0.22em', color: 'var(--sw-cyan)', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 14 }}>
+                        <span aria-hidden="true" style={{ fontSize: 42, fontWeight: 700, color: 'rgba(140,165,255,0.16)', lineHeight: 1 }}>{s.num}</span>
+                        Step
                       </div>
-                      <h3 className="sw-h" style={{ fontSize: 20, marginBottom: 10, letterSpacing: '0.04em' }}>{s.title}</h3>
+                      <h3 className="sw-h" style={{ fontSize: 21, marginBottom: 10, letterSpacing: '0.01em' }}>{s.title}</h3>
                       <p className="sw-muted" style={{ fontSize: 14.5, margin: 0 }}>{s.body}</p>
                     </article>
                   </Reveal>
@@ -234,7 +234,7 @@ export default function Page() {
               </Reveal>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(var(--swarm-cols, 2), 1fr)', gap: 20 }} className="sw-swarm-grid">
                 <Reveal delay={0.08}>
-                  <article className="sw-card" style={{ height: '100%', padding: '34px 32px 36px' }}>
+                  <article className="sw-card" style={{ height: '100%', padding: '34px 32px 32px', display: 'flex', flexDirection: 'column' }}>
                     <span className="sw-orb cyan" aria-hidden="true" />
                     <span className="sw-badge" style={{ color: 'var(--sw-cyan)', marginBottom: 20 }}>
                       <span className="sw-mini cyan" aria-hidden="true" />
@@ -244,22 +244,25 @@ export default function Page() {
                     <p className="sw-muted" style={{ fontSize: 15, margin: 0, lineHeight: 1.65 }}>
                       Reads your evidence, infers the workflow, and shows you a sample to approve.
                     </p>
-                    <span style={{ marginTop: 18, fontSize: 12.5, color: 'var(--sw-cyan)', fontFamily: 'var(--font-space-grotesk), sans-serif', letterSpacing: '0.06em', display: 'inline-flex', alignItems: 'center', gap: 7 }}>
-                      The only swarm you talk to.
+                    <span style={{ marginTop: 'auto', paddingTop: 22, fontSize: 12.5, color: 'var(--sw-cyan)', fontFamily: 'var(--font-space-grotesk), sans-serif', letterSpacing: '0.05em', display: 'inline-flex', alignItems: 'center', gap: 8, borderTop: '1px solid var(--sw-line)' }}>
+                      <span className="sw-mini cyan" aria-hidden="true" /> The only swarm you talk to.
                     </span>
                   </article>
                 </Reveal>
                 <Reveal delay={0.16}>
-                  <article className="sw-card" style={{ height: '100%', padding: '34px 32px 36px' }}>
+                  <article className="sw-card" style={{ height: '100%', padding: '34px 32px 32px', display: 'flex', flexDirection: 'column' }}>
                     <span className="sw-orb indigo" aria-hidden="true" />
                     <span className="sw-badge" style={{ color: 'var(--sw-indigo)', marginBottom: 20 }}>
                       <span className="sw-mini indigo" aria-hidden="true" />
                       Swarm 2 · Build
                     </span>
-                    <h3 className="sw-h" style={{ fontSize: 23, marginBottom: 12 }}>Builds it.</h3>
+                    <h3 className="sw-h" style={{ fontSize: 23, marginBottom: 12 }}>Builds it — and only it.</h3>
                     <p className="sw-muted" style={{ fontSize: 15, margin: 0, lineHeight: 1.65 }}>
-                      Assembles only the parts your workflow needs, nothing it doesn&apos;t.
+                      Assembles only the parts your workflow needs, and refuses the parts it doesn&apos;t.
                     </p>
+                    <span style={{ marginTop: 'auto', paddingTop: 22, fontSize: 12.5, color: 'var(--sw-indigo)', fontFamily: 'var(--font-space-grotesk), sans-serif', letterSpacing: '0.05em', display: 'inline-flex', alignItems: 'center', gap: 8, borderTop: '1px solid var(--sw-line)' }}>
+                      <span className="sw-mini indigo" aria-hidden="true" /> The swarm you never see.
+                    </span>
                   </article>
                 </Reveal>
               </div>
