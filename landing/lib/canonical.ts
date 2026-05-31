@@ -95,6 +95,7 @@ export function validateInvariants(store: CanonicalStore): MissingInformation[] 
   const inputNames = new Set(store.inputs.map((i) => i.input_name).filter(Boolean) as string[]);
 
   const brokenLink = (attr: string, why: string): MissingInformation => ({
+    gap_id: newFactId(),
     missing_attribute: attr,
     why_it_matters: why,
     affected_output: null,

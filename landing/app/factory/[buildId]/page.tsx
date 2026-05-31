@@ -32,10 +32,23 @@ export default function BundlePage() {
 
   useEffect(() => {
     let active = true;
-    fetch(`/api/factory/swarm2/${buildId}`)
-      .then((r) => r.json())
-      .then((d) => { if (!active) return; if (d.error) setError(d.message || d.error); else { setManifest(d.manifest); setFiles(d.files ?? []); } })
-      .catch((e) => active && setError(String(e)));
+    (async () => {
+      try {
+        const r = await fetch(`/api/factory/swarm2/${buildId}`);
+        // Parse defensively — an unknown/expired id can return an empty body.
+        const text = await r.text();
+        const d = text ? JSON.parse(text) : {};
+        if (!active) return;
+        if (!r.ok || d.error) {
+          setError(d.message || d.error || `We couldn't find a build with this id (${r.status}).`);
+          return;
+        }
+        setManifest(d.manifest);
+        setFiles(d.files ?? []);
+      } catch {
+        if (active) setError("We couldn't load this build. The link may be incorrect, or the build may have expired.");
+      }
+    })();
     return () => { active = false; };
   }, [buildId]);
 
@@ -52,27 +65,29 @@ export default function BundlePage() {
           <div className="sw-wrap" style={{ maxWidth: 960 }}>
             <div className="sw-kicker mb-5">BUILD · BUNDLE</div>
 
+            <h1 className="sw-h sw-gradient" style={{ fontSize: 'clamp(34px, 6vw, 60px)', marginBottom: 18 }}>
+              {manifest ? (manifest.workflow_name ?? 'Workflow') : error ? 'Build not found' : 'Loading your bundle'}
+            </h1>
+
             {error && (
               <div
                 role="alert"
                 className="glass"
-                style={{ borderRadius: 16, padding: '14px 18px', marginBottom: 24, borderColor: 'rgba(255,138,128,0.4)' }}
+                style={{ borderRadius: 18, padding: '20px 22px', marginBottom: 24, borderColor: 'rgba(255,138,128,0.4)', maxWidth: 540 }}
               >
-                <span className="sw-mono" style={{ color: '#ff9a8a', fontSize: 13 }}>{error}</span>
+                <p className="sw-muted" style={{ fontSize: 14, lineHeight: 1.6, marginBottom: 16 }}>{error}</p>
+                <a href="/factory" className="sw-btn ghost sm">← Build a workflow</a>
               </div>
             )}
             {!manifest && !error && (
               <div className="sw-mono sw-muted" style={{ fontSize: 13, letterSpacing: '0.18em', display: 'inline-flex', alignItems: 'center', gap: 10 }}>
                 <span className="sw-spark" aria-hidden="true" />
-                Loading bundle…
+                Reading the manifest…
               </div>
             )}
 
             {manifest && (
               <>
-                <h1 className="sw-h sw-gradient" style={{ fontSize: 'clamp(34px, 6vw, 60px)', marginBottom: 18 }}>
-                  {manifest.workflow_name ?? 'Workflow'}
-                </h1>
 
                 <div className="flex flex-wrap items-center gap-2.5 mb-3">
                   <span className="sw-badge sw-mono" style={{ fontSize: 11, letterSpacing: '0.16em' }}>

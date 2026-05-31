@@ -33,11 +33,18 @@ export function buildWds(store: CanonicalStore): Wds {
     build_readiness: readiness,
   };
 
+  // Fall back to a concise, human name when extraction didn't capture one:
+  // "<client> — <primary output>", else the stated objective, else null.
+  const _out0 = store.outputs[0]?.output_name ?? null;
+  const _composed = [store.identity.client_name, _out0].filter(Boolean).join(' — ');
+  const workflowName =
+    store.identity.workflow_name ?? (_composed || null) ?? store.identity.primary_objective ?? null;
+
   return {
     workflow_id: store.identity.workflow_id ?? '',
     version: 1,
     generated_at: new Date().toISOString(),
-    workflow_name: store.identity.workflow_name,
+    workflow_name: workflowName,
     client_name: store.identity.client_name,
     stated_problem: store.identity.stated_problem,
     inferred_problem: store.identity.inferred_problem,

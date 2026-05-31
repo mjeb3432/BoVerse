@@ -7,11 +7,22 @@
 // behind the OPERATOR drawer. Aesthetic: Living Swarm — deep space-black,
 // frosted glass, cyan/indigo glow, pill buttons.
 
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useMemo, useRef, useState } from 'react';
 import SwarmCanvas from '@/components/swarm/swarm-canvas';
 import SiteHeader from '@/components/site/site-header';
 
 type Phase = 'intake' | 'discovering' | 'questions' | 'review' | 'approved' | 'error';
+
+// Guided progress — which of the four user-facing steps each phase maps to.
+const FLOW_STEPS = ['Describe', 'Discover', 'Review', 'Build'] as const;
+const STEP_INDEX: Record<Phase, number> = {
+  intake: 0,
+  discovering: 1,
+  questions: 1,
+  review: 2,
+  approved: 3,
+  error: 1,
+};
 
 interface Question { gap_id: string; suggested_question: string | null; severity: string; missing_attribute?: string | null }
 interface SampleInput { input_name: string; input_type: string; format: string; rendered: string; example_value: unknown }
@@ -33,6 +44,7 @@ export default function FactoryPage() {
   const [dragging, setDragging] = useState(false);
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
 
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -74,7 +86,8 @@ export default function FactoryPage() {
 
   async function discover() {
     if (files.length === 0) { setError('Upload at least one file describing what you have.'); return; }
-    setError(''); setPhase('discovering');
+    if (busy) return;
+    setError(''); setBusy(true); setPhase('discovering');
     try {
       const fd = new FormData();
       fd.append('outcome', outcome);
@@ -102,12 +115,14 @@ export default function FactoryPage() {
       await runSpecify(sid);
     } catch (e) {
       setError((e as Error).message); setPhase('error');
+    } finally {
+      setBusy(false);
     }
   }
 
   async function submitAnswers() {
-    if (!sessionId) return;
-    setError(''); setPhase('discovering');
+    if (!sessionId || busy) return;
+    setError(''); setBusy(true); setPhase('discovering');
     try {
       setStatus('Applying your answers…');
       await jsonFetch('/api/factory/swarm1/gaps', {
@@ -116,6 +131,7 @@ export default function FactoryPage() {
       });
       await runSpecify(sessionId);
     } catch (e) { setError((e as Error).message); setPhase('error'); }
+    finally { setBusy(false); }
   }
 
   async function editInput(input: SampleInput, raw: string) {
@@ -145,22 +161,24 @@ export default function FactoryPage() {
   }
 
   async function approve() {
-    if (!sessionId) return;
-    setError('');
-    const { res, data } = await jsonFetch('/api/factory/swarm1/review', {
-      method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ session_id: sessionId, kind: 'approve' }),
-    });
-    if (res.status === 409) { setError(data.message || 'Resolve the open questions first.'); return; }
-    // Approval releases the Build swarm — build the implementation, then show it.
-    setPhase('approved'); setStatus('Building the implementation…');
+    if (!sessionId || busy) return;
+    setError(''); setBusy(true);
     try {
+      const { res, data } = await jsonFetch('/api/factory/swarm1/review', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId, kind: 'approve' }),
+      });
+      if (res.status === 409) { setError(data.message || 'Resolve the open questions first.'); return; }
+      // Approval releases the Build swarm — build the implementation, then show it.
+      setPhase('approved'); setStatus('Reading the approved spec…');
       const { data: b } = await jsonFetch('/api/factory/swarm2/build', {
         method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ session_id: sessionId }),
       });
-      if (b.build_id) { window.location.href = `/factory/${b.build_id}`; return; }
+      // Success → hand off to the bundle view (the object ledger lives there).
+      if (b.build_id) { setStatus('Done — opening your bundle…'); window.location.href = `/factory/${b.build_id}`; return; }
       setError(b.message || b.error || 'Build failed.');
     } catch (e) { setError((e as Error).message); }
+    finally { setBusy(false); }
   }
 
   const computed = useMemo(() => Object.entries(sampleOutput?.computed_fields ?? {}), [sampleOutput]);
@@ -183,6 +201,23 @@ export default function FactoryPage() {
           <p className="sw-muted text-sm lg:text-base leading-relaxed max-w-2xl mb-10">
             Tell us the outcome you want and drop in whatever you already have. BoVerse infers the workflow and shows you a sample result and the inputs that produce it. Comment, tweak, approve — we build it.
           </p>
+
+          {/* guided progress */}
+          <nav className="sw-stepper" aria-label="Progress">
+            {FLOW_STEPS.map((label, i) => {
+              const ai = STEP_INDEX[phase];
+              const state = i < ai ? 'done' : i === ai ? 'active' : 'todo';
+              return (
+                <Fragment key={label}>
+                  <span className="sw-stepper-item" data-state={state} aria-current={state === 'active' ? 'step' : undefined}>
+                    <span className="sw-stepper-num" aria-hidden="true">{state === 'done' ? '✓' : i + 1}</span>
+                    <span className="sw-stepper-label">{label}</span>
+                  </span>
+                  {i < FLOW_STEPS.length - 1 && <span className="sw-stepper-line" aria-hidden="true" />}
+                </Fragment>
+              );
+            })}
+          </nav>
 
           {/* progress / status line */}
           {status && phase !== 'error' && (
@@ -223,7 +258,7 @@ export default function FactoryPage() {
                   ))}
                 </ul>
               )}
-              <button onClick={discover} className="sw-btn">Discover →</button>
+              <button onClick={discover} disabled={busy} className="sw-btn">{busy ? 'Working…' : 'Discover →'}</button>
             </div>
           )}
 
@@ -244,7 +279,7 @@ export default function FactoryPage() {
                     className="sw-field w-full text-sm p-2.5" />
                 </div>
               ))}
-              <button onClick={submitAnswers} className="sw-btn">Submit →</button>
+              <button onClick={submitAnswers} disabled={busy} className="sw-btn">{busy ? 'Working…' : 'Submit →'}</button>
             </div>
           )}
 
@@ -270,6 +305,13 @@ export default function FactoryPage() {
 
               <section>
                 <div className="sw-kicker mb-3">Sample inputs · edit any value to re-render</div>
+                {sampleInputs.length === 0 && (
+                  <div className="sw-card" style={{ padding: '18px 20px' }}>
+                    <p className="sw-muted text-sm" style={{ margin: 0 }}>
+                      No per-run inputs to configure — this workflow is driven directly by the evidence you provided. Add a comment below if something here should become an editable input.
+                    </p>
+                  </div>
+                )}
                 <div className="space-y-3">
                   {sampleInputs.map((si) => (
                     <details key={si.input_name} className="sw-card">
@@ -297,7 +339,7 @@ export default function FactoryPage() {
               </section>
 
               <div className="flex flex-wrap items-center gap-4">
-                <button onClick={approve} className="sw-btn">Approve →</button>
+                <button onClick={approve} disabled={busy} className="sw-btn">{busy ? 'Approving…' : 'Approve →'}</button>
                 <span className="sw-muted-2 text-xs">Approval releases the build.</span>
               </div>
 
@@ -305,18 +347,31 @@ export default function FactoryPage() {
             </div>
           )}
 
-          {/* ── APPROVED ── */}
+          {/* ── APPROVED → BUILDING (Swarm 2) ── */}
           {phase === 'approved' && (
-            <div className="space-y-6">
-              <div className="glass p-6">
-                <div className="sw-badge mb-3" style={{ borderColor: 'rgba(56,225,255,0.4)', color: 'var(--sw-cyan)' }}>
-                  <span className="sw-mini cyan" />
-                  APPROVED
+            error ? (
+              <div className="glass mx-auto" style={{ maxWidth: 520, padding: 'clamp(30px,5vw,44px)', textAlign: 'center' }}>
+                <div className="sw-badge mx-auto mb-4" style={{ borderColor: 'rgba(255,138,128,0.45)', color: '#ff9a8a' }}>
+                  <span className="sw-mini" style={{ background: '#ff8a80', boxShadow: '0 0 10px #ff8a80' }} aria-hidden="true" />
+                  BUILD FAILED
                 </div>
-                <p className="sw-muted text-sm">The specification is approved and the Build swarm is released. The build view appears here once Swarm 2 is wired.</p>
+                <p className="sw-muted text-sm mb-5" role="alert">{error}</p>
+                <button onClick={approve} disabled={busy} className="sw-btn ghost sm">Retry build →</button>
               </div>
-              {wds && <OperatorDrawer wds={wds} />}
-            </div>
+            ) : (
+              <div className="glass mx-auto" style={{ maxWidth: 520, padding: 'clamp(36px,6vw,56px)', textAlign: 'center' }}>
+                <div className="sw-orbit" aria-hidden="true">
+                  <i />
+                  <i className="b" />
+                  <span />
+                </div>
+                <div className="sw-kicker justify-center mb-3" style={{ color: 'var(--sw-indigo)' }}>Swarm 2 · Build</div>
+                <h2 className="sw-h sw-gradient" style={{ fontSize: 'clamp(22px,3.6vw,30px)', marginBottom: 12 }}>Assembling your workflow</h2>
+                <p className="sw-muted text-sm mx-auto" style={{ maxWidth: '34ch' }} aria-live="polite">
+                  {status || 'Building only the objects your workflow needs, and refusing the rest.'}
+                </p>
+              </div>
+            )
           )}
 
           {phase === 'error' && (

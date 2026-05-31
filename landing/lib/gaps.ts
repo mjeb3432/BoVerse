@@ -104,8 +104,13 @@ const SEV_RANK: Record<string, number> = { critical: 0, high: 1, medium: 2, low:
  * as an explicit assumption. Mutates resolution_status + suggested_question.
  */
 export function prioritize(gaps: MissingInformation[]): MissingInformation[] {
+  // broken_link gaps are internal structural-integrity records (a step references
+  // an input/role/step that isn't defined). They're kept in the ledger for the
+  // operator + audit, but never shown to the business user as a question — the
+  // language ("…consumes an input that is not defined") is plumbing they can't
+  // act on. They fall through to 'assumed' below so they don't block the build.
   const questions = gaps
-    .filter((g) => g.blocking_status === 'blocking' && (g.severity === 'critical' || g.severity === 'high'))
+    .filter((g) => g.gap_kind !== 'broken_link' && g.blocking_status === 'blocking' && (g.severity === 'critical' || g.severity === 'high'))
     .sort((a, b) => SEV_RANK[a.severity] - SEV_RANK[b.severity]);
   const qset = new Set(questions);
   for (const g of gaps) {
