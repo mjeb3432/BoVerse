@@ -173,6 +173,35 @@ export async function setSessionStage(sessionId: string, stage: string): Promise
   await query('update workflow_sessions set current_stage = $1 where id = $2', [stage, sessionId]);
 }
 
+// ─── derived-projection persistence (WDS + Simulation Pack) ──────────────────
+// Reuses the now-free generate_output / simulate_output JSONB columns on
+// workflow_sessions (no migration). Memory map for local / no-DB.
+const PROJECTIONS = new Map<string, { wds: unknown; simulation: unknown }>();
+
+export async function saveProjections(sessionId: string, wds: unknown, simulation: unknown): Promise<void> {
+  if (!HAS_DATABASE || sessionId.startsWith('local-')) {
+    PROJECTIONS.set(sessionId, { wds, simulation });
+    return;
+  }
+  await query(
+    'update workflow_sessions set generate_output = $1, simulate_output = $2 where id = $3',
+    [JSON.stringify(wds), JSON.stringify(simulation), sessionId],
+  );
+}
+
+export async function getProjections(sessionId: string): Promise<{ wds: unknown; simulation: unknown } | null> {
+  if (!HAS_DATABASE || sessionId.startsWith('local-')) {
+    return PROJECTIONS.get(sessionId) ?? null;
+  }
+  const r = await query<{ generate_output: unknown; simulate_output: unknown }>(
+    'select generate_output, simulate_output from workflow_sessions where id = $1',
+    [sessionId],
+  );
+  const row = r?.rows[0];
+  if (!row) return null;
+  return { wds: row.generate_output, simulation: row.simulate_output };
+}
+
 export async function getCanonical(workflowId: string): Promise<CanonicalStore | null> {
   if (!HAS_DATABASE) {
     return MEMORY.get(workflowId) ?? null;
