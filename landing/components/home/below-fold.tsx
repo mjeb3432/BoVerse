@@ -20,6 +20,22 @@ const steps = [
   },
 ];
 
+// The two agent swarms that power it. Discovery decides what to build; Build builds it.
+const swarms = [
+  {
+    tag: "SWARM 1",
+    name: "DISCOVERY",
+    desc: "Figures out what to build. Reads your evidence, infers the workflow, and shows you a sample to approve. This is the only swarm you talk to.",
+    does: ["Reads your uploads", "Infers the inputs, outputs, and rules", "Produces a sample + a spec to approve"],
+  },
+  {
+    tag: "SWARM 2",
+    name: "BUILD",
+    desc: "Builds it. Once you approve, it assembles the workflow — only the parts your workflow actually needs, nothing it doesn't.",
+    does: ["Maps the spec to components", "Builds only what's required", "Hands you the finished workflow"],
+  },
+];
+
 function Label({ children }: { children: ReactNode }) {
   return (
     <div className="flex items-center gap-3 mb-8 lg:mb-10 opacity-60">
@@ -76,6 +92,39 @@ export default function HomeBelowFold() {
                 <div className="text-[10px] font-mono text-white/40 tracking-widest mb-4">{s.n}</div>
                 <div className="text-lg lg:text-xl font-mono font-bold tracking-widest mb-3">{s.name}</div>
                 <p className="text-xs lg:text-sm font-mono text-white/60 leading-relaxed">{s.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* TWO AGENT SWARMS */}
+      <section className="border-t border-white/10 bg-black">
+        <div className="container mx-auto px-6 lg:px-16 py-20 lg:py-32 max-w-4xl">
+          <Label>UNDER THE HOOD</Label>
+          <h2 className={HEADLINE} style={{ letterSpacing: "0.06em" }}>
+            TWO AGENT SWARMS.
+            <span className="block opacity-90 mt-1 lg:mt-2">ONE FACTORY.</span>
+          </h2>
+          <p className={`${BODY} max-w-2xl mb-12 lg:mb-16`}>
+            Behind those three steps, two swarms of AI agents do the work. The first figures out
+            what to build. The second builds it. You only ever talk to the first.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-white/10 border border-white/10">
+            {swarms.map((s) => (
+              <div key={s.tag} className="bg-black p-6 lg:p-8">
+                <div className="text-[10px] font-mono text-white/40 tracking-widest mb-3">{s.tag}</div>
+                <div className="text-lg lg:text-xl font-mono font-bold tracking-widest mb-3">{s.name}</div>
+                <p className="text-xs lg:text-sm font-mono text-white/60 leading-relaxed mb-5">{s.desc}</p>
+                <ul className="space-y-2 border-t border-white/10 pt-4">
+                  {s.does.map((d) => (
+                    <li key={d} className="text-[11px] lg:text-xs font-mono text-white/50 flex gap-2">
+                      <span className="text-white/30" aria-hidden="true">→</span>
+                      <span>{d}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             ))}
           </div>

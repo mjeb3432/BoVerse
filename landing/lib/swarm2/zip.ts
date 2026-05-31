@@ -1,6 +1,6 @@
 // lib/swarm2/zip.ts — minimal store-only (no compression) ZIP writer. No deps.
-// The bundle is KB-sized text, so store-only is sufficient and keeps the
-// "self-contained Node, no extra services" posture of lib/docx-renderer.ts.
+// The bundle is KB-sized text, so store-only is sufficient and keeps a
+// self-contained Node posture (no extra services, no dependencies).
 
 const CRC_TABLE = (() => {
   const t = new Uint32Array(256);

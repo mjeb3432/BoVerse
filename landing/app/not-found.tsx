@@ -96,32 +96,10 @@ export default function NotFound() {
             </li>
             <li>
               <Link
-                href="/process"
-                className="group flex items-baseline gap-4 lg:gap-6 py-3 lg:py-4 border-b border-white/10 hover:border-white/40 focus-visible:border-white focus-visible:outline-none transition-colors"
-              >
-                <span className="text-white/40 text-xs lg:text-sm w-12 lg:w-16 shrink-0">002</span>
-                <span className="text-white text-base lg:text-xl tracking-wide">/process</span>
-                <span className="text-white/50 text-xs lg:text-sm flex-1">Five stages from artifacts to workflows</span>
-                <span className="text-white/40 group-hover:text-white transition-colors">→</span>
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/example"
-                className="group flex items-baseline gap-4 lg:gap-6 py-3 lg:py-4 border-b border-white/10 hover:border-white/40 focus-visible:border-white focus-visible:outline-none transition-colors"
-              >
-                <span className="text-white/40 text-xs lg:text-sm w-12 lg:w-16 shrink-0">003</span>
-                <span className="text-white text-base lg:text-xl tracking-wide">/example</span>
-                <span className="text-white/50 text-xs lg:text-sm flex-1">Apex Electrical · worked example</span>
-                <span className="text-white/40 group-hover:text-white transition-colors">→</span>
-              </Link>
-            </li>
-            <li>
-              <Link
                 href="/factory"
                 className="group flex items-baseline gap-4 lg:gap-6 py-3 lg:py-4 border-b border-white/10 hover:border-white/40 focus-visible:border-white focus-visible:outline-none transition-colors"
               >
-                <span className="text-white/40 text-xs lg:text-sm w-12 lg:w-16 shrink-0">004</span>
+                <span className="text-white/40 text-xs lg:text-sm w-12 lg:w-16 shrink-0">002</span>
                 <span className="text-white text-base lg:text-xl tracking-wide">/build</span>
                 <span className="text-white/50 text-xs lg:text-sm flex-1">Build workflow · generator</span>
                 <span className="text-white/40 group-hover:text-white transition-colors">→</span>
