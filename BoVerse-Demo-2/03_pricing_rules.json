@@ -1,0 +1,86 @@
+{
+  "_comment": "Flint & Tinder pricing rules — the deterministic part of how a brief becomes a priced proposal. Updated 2026-04-12 by Sam.",
+  "version": "2026.Q2.1",
+
+  "rush": {
+    "_rule_name": "Rush Multiplier",
+    "trigger": "A line item is treated as 'rush' if the client-requested delivery date is INSIDE that service's standard delivery window (service_catalogue.delivery_days_standard).",
+    "multiplier_source": "Use the per-service rush_multiplier in service_catalogue.json. If a service does not define one, fall back to the category multiplier below.",
+    "rush_multipliers_fallback_by_category": {
+      "identity": 1.40,
+      "campaign": 1.35,
+      "photo": 1.30,
+      "media_management": null
+    },
+    "note": "When a per-service rush_multiplier exists, IT WINS. The category-level numbers are a safety net for new services that haven't been priced yet."
+  },
+
+  "pricing_order": {
+    "_rule_name": "Multiplier-Before-Discount",
+    "rule": "Always compute multipliers (rush, complexity) BEFORE applying any discount. This is the 'Lighthaus rule' — we lost a job on this in 2024 because we applied a repeat-client discount first and the rush adjustment ended up smaller than it should have been. Never again.",
+    "ordering": [
+      "subtotal (sum of rate_card_cad line items)",
+      "+ multipliers (rush, complexity)",
+      "= adjusted_subtotal",
+      "- discounts (repeat-client, multi-SKU bundle)",
+      "= pre_pass_through_total",
+      "+ pass-through items (at cost, no markup)",
+      "+ GST (5%)",
+      "= grand_total"
+    ]
+  },
+
+  "discounts": {
+    "repeat_client": {
+      "_rule_name": "Repeat-Client Discount",
+      "percent": 5.0,
+      "repeat_client_threshold_jobs": 3,
+      "trigger": "Apply ONLY if the client has 3 or more prior completed and paid jobs in the trailing 24 months.",
+      "applies_to": "adjusted_subtotal (after multipliers, before pass-through)"
+    },
+    "multi_sku_bundle": {
+      "_rule_name": "Multi-SKU Bundle Discount",
+      "percent": 7.5,
+      "trigger": "Apply when a single brief covers 2 or more product SKUs that share identity work. Single-SKU launches DO NOT qualify, even if multiple deliverable types (identity + campaign + shoot) are bundled — the rule is about SKU count, not deliverable count.",
+      "applies_to": "adjusted_subtotal (after multipliers, before pass-through)"
+    }
+  },
+
+  "media": {
+    "_rule_name": "Media Pass-Through At Cost",
+    "rule": "Ad spend, talent buyouts, print pre-press, location permits, and any third-party media costs are ALWAYS billed through at cost. We never mark up media. This is non-negotiable — it is the trust trade with the client.",
+    "categories_pass_through": [
+      "ad_spend",
+      "talent_buyout",
+      "print_pre_press",
+      "location_permit",
+      "third_party_licensing"
+    ]
+  },
+
+  "approval_gates": {
+    "_rule_name": "Internal Approval Gates",
+    "rule": "Before any proposal is sent to the client, route by total agency-fee value (the pre-GST line above 'grand_total').",
+    "gates": [
+      { "ceiling_cad": 25000, "approver": "Creative Director (Sam)" },
+      { "ceiling_cad": 60000, "approver": "Managing Partner (Mara)" },
+      { "ceiling_cad": null, "approver": "Managing Partner (Mara) + 2-partner co-sign for anything > $60K" }
+    ]
+  },
+
+  "deposit": {
+    "_rule_name": "Deposit Rule",
+    "base_threshold_cad": 15000,
+    "base_deposit_percent": 40,
+    "rush_deposit_percent": 50,
+    "rule": "If pre-GST agency fees are >= $15K, require a deposit at signature. Default is 40%. If ANY line item carries a rush multiplier, bump deposit to 50% — rush jobs cash-flow harder."
+  },
+
+  "tax": {
+    "_rule_name": "Tax",
+    "gst_percent": 5.0,
+    "applies_to": "agency_fees_pre_gst",
+    "pass_through_taxed_separately": true,
+    "note": "GST applies to our agency fees. Pass-through items are GST'd to the client at the cost from the underlying vendor's invoice — we do not re-tax them."
+  }
+}

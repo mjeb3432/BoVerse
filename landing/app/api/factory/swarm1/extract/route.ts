@@ -21,6 +21,7 @@ import {
   extractionSystemPrompt,
   mapExtractionToStore,
   type ExtractionEnvelope,
+  type SetupIntake,
 } from '@/lib/registry';
 import { upsertRagAssets } from '@/lib/rag';
 
@@ -37,6 +38,12 @@ export async function POST(req: Request) {
   const form = await req.formData();
   const outcome = typeof form.get('outcome') === 'string' ? (form.get('outcome') as string) : null;
   const providedSession = typeof form.get('session_id') === 'string' ? (form.get('session_id') as string) : null;
+  // Optional pre-upload Setup — four plain-English answers that anchor
+  // discovery (source system, desired output, destination, connection
+  // notes / sign-off contact). Free-text by design so non-technical users
+  // can describe their stack however they like; the LLM uses these as
+  // additional grounding alongside the stated outcome.
+  const setupIntake = parseSetupIntake(form.get('setup_intake'));
   const files = form.getAll('files').filter((f): f is File => f instanceof File);
   if (files.length === 0) {
     return NextResponse.json({ error: 'no_files', message: 'Upload at least one evidence file.' }, { status: 400 });
@@ -71,7 +78,7 @@ export async function POST(req: Request) {
   const mmModel = multimodalModel();
   const model = needsMultimodal && mmModel ? mmModel : fastModel();
   const droppedImages = needsMultimodal && !mmModel;
-  const system = extractionSystemPrompt(outcome);
+  const system = extractionSystemPrompt(outcome, setupIntake);
 
   let env: ExtractionEnvelope | null = null;
   try {
@@ -165,6 +172,26 @@ async function persistArtifacts(sessionId: string, parsed: Parsed[]) {
       [sessionId, file.name, file.type, file.size, result.text ?? null, Boolean(result.isImage)],
     );
   }
+}
+
+// Parse the optional Setup intake JSON blob from FormData. Lenient: any non-
+// string fields are dropped, an unparseable blob returns null, and a fully
+// empty payload returns null so downstream callers can treat "no setup
+// provided" the same as "missing" (the prompt collapses cleanly).
+function parseSetupIntake(raw: FormDataEntryValue | null): SetupIntake | null {
+  if (typeof raw !== 'string' || raw.trim().length === 0) return null;
+  let parsed: unknown;
+  try { parsed = JSON.parse(raw); } catch { return null; }
+  if (!parsed || typeof parsed !== 'object') return null;
+  const obj = parsed as Record<string, unknown>;
+  const out: SetupIntake = {
+    source: typeof obj.source === 'string' ? obj.source.trim() : '',
+    output: typeof obj.output === 'string' ? obj.output.trim() : '',
+    destination: typeof obj.destination === 'string' ? obj.destination.trim() : '',
+    connection: typeof obj.connection === 'string' ? obj.connection.trim() : '',
+  };
+  const empty = !out.source && !out.output && !out.destination && !out.connection;
+  return empty ? null : out;
 }
 
 // Seed each text-bearing evidence file as a RAG asset (grounding for later
