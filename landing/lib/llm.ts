@@ -89,11 +89,15 @@ export const multimodalModel = () => {
   return null;
 };
 
-// RAG asset embeddings. Gemini `text-embedding-004` is free (1500 req/day,
-// 768 dimensions, matches the pgvector column type). Returns null if Gemini
+// RAG asset embeddings. `gemini-embedding-001` is the current GA Gemini
+// embedding model (the older `text-embedding-004` was dropped from
+// @ai-sdk/google v3 and now returns "model not found"). It defaults to 3072
+// dims, so we request 768 via providerOptions at the embed() call to match the
+// pgvector column (vector(768), migrations/0002). Returns null if the Gemini
 // key is missing — RAG features then degrade to keyword search.
+export const EMBEDDING_DIMENSIONS = 768;
 export const embeddingModel = () => {
-  if (HAS_GOOGLE_KEY) return google.textEmbedding('text-embedding-004');
+  if (HAS_GOOGLE_KEY) return google.textEmbedding('gemini-embedding-001');
   return null;
 };
 
