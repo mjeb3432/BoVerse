@@ -87,7 +87,7 @@ export const ReviewTriggerEnum = z.enum([
 export const ComplexityLevelEnum = z.enum(['simple', 'moderate', 'complex', 'very_complex', 'unknown']);
 export const SeverityEnum = z.enum(['critical', 'high', 'medium', 'low', 'unknown']);
 export const BlockingStatusEnum = z.enum(['blocking', 'non_blocking', 'deferred', 'unknown']);
-export const GapKindEnum = z.enum(['absence', 'low_confidence', 'broken_link', 'conflict']);
+export const GapKindEnum = z.enum(['absence', 'low_confidence', 'broken_link', 'conflict', 'tech_stack']);
 export const ResolutionStatusEnum = z.enum(['open', 'asked', 'answered', 'assumed', 'wont_fix', 'unknown']);
 export const ExtractionMethodEnum = z.enum([
   'llm_extraction', 'direct_field', 'ocr', 'table_parse', 'transcription', 'rule_derived',

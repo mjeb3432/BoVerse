@@ -8,6 +8,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import Link from 'next/link';
 import SwarmCanvas from '@/components/swarm/swarm-canvas';
 import SiteHeader from '@/components/site/site-header';
 
@@ -77,7 +78,7 @@ export default function BundlePage() {
                 style={{ padding: '20px 22px', marginBottom: 24, borderColor: '#c0341f', maxWidth: 540 }}
               >
                 <p className="sw-muted" style={{ fontSize: 14, lineHeight: 1.6, marginBottom: 16 }}>{error}</p>
-                <a href="/factory" className="sw-btn ghost sm">Build a workflow</a>
+                <Link href="/factory" className="sw-btn ghost sm">Build a workflow</Link>
               </div>
             )}
             {!manifest && !error && (

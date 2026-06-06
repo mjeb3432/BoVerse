@@ -1,6 +1,13 @@
 // Swarm 2 · BUILD. Consumes the approved spec + simulation, assembles the
 // implementation bundle (only the objects the archetype requires), verifies it,
 // and persists it. Refuses if the spec was never approved.
+//
+// ─── EXPORT BOUNDARY ─────────────────────────────────────────────────────────
+// This route is the REFERENCE Build swarm. It consumes the same Swarm2Input
+// contract (wds + simulation + approval) that /api/factory/swarm1/handoff
+// exports. To run Build in a separate application instead, point that app's
+// swarm at the handoff endpoint and skip this route entirely — Discovery does
+// not depend on it. See docs/workflow-creator/HANDOFF.md.
 
 import { NextResponse } from 'next/server';
 import { getWorkflowIdForSession, getCanonical, getProjections } from '@/lib/canonical';

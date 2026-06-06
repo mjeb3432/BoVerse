@@ -42,6 +42,10 @@ export function assemble(input: Swarm2Input): AssembledBundle {
   files.push({ path: 'spec.md', media_type: 'text/markdown', content: renderSpec(input, plan.build_path) });
   for (const o of objects) if (o.kind === 'built') files.push(...o.files);
   files.push({ path: 'agent-swarm.md', media_type: 'text/markdown', content: renderAgentSwarm(input, objects) });
+  // The user-approved deliverable, as the golden reference the build reproduces.
+  if (input.simulation.sample_output?.rendered_sample) {
+    files.push({ path: 'golden-output.md', media_type: 'text/markdown', content: renderGoldenOutput(input) });
+  }
   files.push({ path: 'REFUSED.md', media_type: 'text/markdown', content: renderRefused(objects, archetype) });
 
   const verification = verify(input, objects);
@@ -113,7 +117,47 @@ function renderAgentSwarm(input: Swarm2Input, objects: ObjectResult[]): string {
   lines.push('', '## Output');
   const o = w.outputs[0];
   lines.push(`Produce **${o?.output_name ?? 'the deliverable'}** with sections: ${(o?.required_sections ?? []).join(', ') || '—'}.`);
+
+  // GOLDEN OUTPUT — the user-approved sample is the target the build agents
+  // must match. This is the single most load-bearing reference in the bundle:
+  // the human already verified this exact deliverable, so the build's job is to
+  // reproduce it from real inputs, not to re-imagine the format. Full copy also
+  // written to golden-output.md in the bundle.
+  const so = input.simulation.sample_output;
+  if (so?.rendered_sample) {
+    lines.push('', '## Golden output — MATCH THIS', '');
+    lines.push('The user reviewed and approved the exact deliverable below. Reproduce its structure, tone, section order, and math from real inputs. Do not invent a different format. The numbers will differ per run; the shape must not.', '');
+    lines.push('```');
+    lines.push(so.rendered_sample.trim());
+    lines.push('```');
+    const computed = Object.entries(so.computed_fields ?? {});
+    if (computed.length > 0) {
+      lines.push('', '**Key computed fields the output must include (names, not these example values):**');
+      for (const [k, v] of computed) lines.push(`- ${k}: ${String(v)}`);
+    }
+  }
+
   lines.push('', `_Objects available in this bundle: ${built.join(', ')}._`);
+  return lines.join('\n');
+}
+
+// The approved deliverable as a standalone bundle artifact. The downstream
+// Build swarm reads this as the golden reference to reproduce; it's the same
+// `sample_output` the user verified in the review surface.
+function renderGoldenOutput(input: Swarm2Input): string {
+  const so = input.simulation.sample_output;
+  const lines: string[] = [];
+  lines.push(`# Golden output — ${so?.output_name ?? 'deliverable'}`, '');
+  lines.push('> The user-approved sample. The build must reproduce this deliverable’s structure and rules from real inputs. Example values will differ per run; the format, section order, and computed-field set must not.', '');
+  lines.push(`**Type:** ${so?.output_type ?? '—'} · **Format:** ${so?.output_format ?? '—'}  `);
+  lines.push(`**Required sections:** ${(so?.required_sections ?? []).join(', ') || '—'}`, '');
+  lines.push('## Approved sample', '');
+  lines.push(so?.rendered_sample?.trim() || '_(no sample rendered)_');
+  const computed = Object.entries(so?.computed_fields ?? {});
+  if (computed.length > 0) {
+    lines.push('', '## Computed fields (the named values the output must carry)', '');
+    for (const [k, v] of computed) lines.push(`- **${k}:** ${String(v)}`);
+  }
   return lines.join('\n');
 }
 

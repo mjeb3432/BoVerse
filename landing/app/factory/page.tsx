@@ -28,21 +28,55 @@ interface Question { gap_id: string; suggested_question: string | null; severity
 interface SampleInput { input_name: string; input_type: string; format: string; rendered: string; example_value: unknown }
 interface SampleOutput { output_name: string; output_type: string; output_format: string; required_sections: string[]; rendered_sample: string; computed_fields: Record<string, unknown> }
 interface WdsSummary { primary_archetype: string; complexity: string; overall_confidence: number; required_components: string[]; unnecessary_components: string[] }
+interface HitlGate { workflow_stage: string | null; human_role: string | null; reason_for_review: string | null; review_trigger: string | null; approval_required: boolean }
 
-// Pre-upload Setup — four plain-English questions that anchor Discovery before
-// it reads the evidence. Each field is optional; the more the user fills in,
-// the more deterministic the downstream sample becomes. These also become the
-// integration-points record the downstream Build swarm consumes at handoff.
+// Pre-upload Setup — plain-English questions that anchor Discovery before it
+// reads the evidence. Every field is optional. Free-text fields let the user
+// describe their stack however they want; *Mode fields capture a small typed
+// vocabulary the downstream Build swarm can switch on directly at handoff.
+type ConnectionMode = 'batch_upload' | 'api' | 'email' | 'periodic_export' | 'webhook' | 'unknown';
+const CONNECTION_MODE_OPTIONS: { value: ConnectionMode; label: string }[] = [
+  { value: 'unknown', label: 'Not sure yet' },
+  { value: 'batch_upload', label: 'Files I upload by hand' },
+  { value: 'api', label: 'Live API / system integration' },
+  { value: 'email', label: 'Forwarded emails / mailbox' },
+  { value: 'periodic_export', label: 'Periodic export (CSV, XLSX)' },
+  { value: 'webhook', label: 'Webhook / push event' },
+];
 interface SetupIntake {
-  source: string;        // "where does the work come in from"
-  output: string;        // "what do you want to produce"
-  destination: string;   // "where should the result land"
-  connection: string;    // "any specific connection details or sign-off contact"
+  source: string;
+  sourceMode: ConnectionMode;
+  fileTypes: string;
+  output: string;
+  destination: string;
+  destinationMode: ConnectionMode;
+  connection: string;
 }
-const EMPTY_SETUP: SetupIntake = { source: '', output: '', destination: '', connection: '' };
+const EMPTY_SETUP: SetupIntake = {
+  source: '', sourceMode: 'unknown', fileTypes: '',
+  output: '',
+  destination: '', destinationMode: 'unknown',
+  connection: '',
+};
 function setupIsEmpty(s: SetupIntake): boolean {
-  return !s.source.trim() && !s.output.trim() && !s.destination.trim() && !s.connection.trim();
+  return (
+    !s.source.trim() && !s.fileTypes.trim() && !s.output.trim() &&
+    !s.destination.trim() && !s.connection.trim() &&
+    s.sourceMode === 'unknown' && s.destinationMode === 'unknown'
+  );
 }
+function setupFilledCount(s: SetupIntake): number {
+  let n = 0;
+  if (s.source.trim()) n++;
+  if (s.sourceMode !== 'unknown') n++;
+  if (s.fileTypes.trim()) n++;
+  if (s.output.trim()) n++;
+  if (s.destination.trim()) n++;
+  if (s.destinationMode !== 'unknown') n++;
+  if (s.connection.trim()) n++;
+  return n;
+}
+const SETUP_TOTAL = 7;
 
 // Severity → editorial accent (style only). vermilion-ink = critical/high, ink = medium, faint = low.
 const SEV_COLOR: Record<string, string> = {
@@ -67,6 +101,7 @@ export default function FactoryPage() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [sampleOutput, setSampleOutput] = useState<SampleOutput | null>(null);
   const [sampleInputs, setSampleInputs] = useState<SampleInput[]>([]);
+  const [hitlGates, setHitlGates] = useState<HitlGate[]>([]);
   const [wds, setWds] = useState<WdsSummary | null>(null);
   const [comment, setComment] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
@@ -96,6 +131,7 @@ export default function FactoryPage() {
     if (data.error) throw new Error(data.message || data.error);
     setSampleOutput(data.sample_output);
     setSampleInputs(data.sample_inputs ?? []);
+    setHitlGates(data.hitl_gates ?? []);
     setWds(data.wds_summary ?? null);
     setPhase('review');
   }
@@ -309,7 +345,24 @@ export default function FactoryPage() {
           {phase === 'review' && sampleOutput && (
             <div className="space-y-10">
               <section>
-                <div className="sw-kicker mb-3">Sample output / {sampleOutput.output_name.toUpperCase()}</div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="sw-kicker">Sample output / {sampleOutput.output_name.toUpperCase()}</div>
+                  <button
+                    onClick={() => downloadSimulationPack({
+                      setup_intake: setup,
+                      sample_output: sampleOutput,
+                      sample_inputs: sampleInputs,
+                      hitl_gates: hitlGates,
+                      wds_summary: wds,
+                      open_questions: questions,
+                      session_id: sessionId,
+                    })}
+                    className="sw-btn ghost sm"
+                    title="Download the per-session simulation pack — your Setup answers, sample output, sample inputs, and sign-off gates — as one JSON file for the downstream build team."
+                  >
+                    Download simulation pack
+                  </button>
+                </div>
                 <div className="glass p-5 lg:p-6">
                   <pre className="sw-mono whitespace-pre-wrap text-xs lg:text-sm leading-relaxed" style={{ color: 'var(--ink)' }}>{sampleOutput.rendered_sample}</pre>
                 </div>
@@ -324,6 +377,43 @@ export default function FactoryPage() {
                   </div>
                 )}
               </section>
+
+              {hitlGates.length > 0 && (
+                <section>
+                  <div className="sw-kicker mb-3">Sign-off gates / human review points</div>
+                  <p className="sw-muted text-xs leading-relaxed mb-3" style={{ maxWidth: '60ch' }}>
+                    Every place a human approves before the workflow moves forward. These travel
+                    with the bundle to the build team so each one becomes a real review step,
+                    not an afterthought.
+                  </p>
+                  <div className="sw-card divide-y" style={{ borderColor: 'var(--rule)' }}>
+                    {hitlGates.map((g, i) => (
+                      <div key={i} className="px-4 py-3 text-xs" style={{ borderColor: 'var(--rule)' }}>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span style={{ color: 'var(--ink)' }}>
+                            {g.workflow_stage || 'Stage unspecified'}
+                            {g.human_role ? ` — ${g.human_role}` : ''}
+                          </span>
+                          <span className="sw-badge" style={{
+                            borderColor: g.approval_required ? 'var(--signal)' : 'var(--rule-2)',
+                            color: g.approval_required ? 'var(--signal-ink)' : 'var(--ink-dim)',
+                          }}>
+                            {g.approval_required ? 'APPROVAL REQUIRED' : 'REVIEW ONLY'}
+                          </span>
+                        </div>
+                        {g.reason_for_review && (
+                          <p className="sw-muted text-[11px]" style={{ margin: 0 }}>{g.reason_for_review}</p>
+                        )}
+                        {g.review_trigger && g.review_trigger !== 'unknown' && (
+                          <p className="sw-muted-2 sw-mono text-[10px] tracking-widest mt-1" style={{ margin: 0 }}>
+                            trigger: {g.review_trigger}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
 
               <section>
                 <div className="sw-kicker mb-3">Sample inputs</div>
@@ -406,10 +496,68 @@ export default function FactoryPage() {
 }
 
 // Pre-upload Setup — collapsed by default so it doesn't crowd the intake. When
-// the user expands and fills in any field, it surfaces a small "filled" hint
+// the user expands and fills in any field, it surfaces a "N of N filled" hint
 // next to the summary so they know the answers are being carried into Discover.
+// Trigger a browser download of a JSON object.
+function downloadJson(obj: unknown, slug: string): void {
+  try {
+    const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `boverse-simulation-pack-${slug || 'workflow'}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch { /* leave the rendered view in place — nothing else to do */ }
+}
+
+// Download the per-session simulation pack. Single source of truth is the
+// server HANDOFF endpoint (the export boundary the downstream Build swarm
+// consumes) — so the file the user downloads is byte-for-byte what the
+// downstream swarm would fetch. Falls back to a client-assembled pack only
+// when the endpoint isn't available (local / no-DB dev sessions).
+async function downloadSimulationPack(pack: {
+  setup_intake: SetupIntake;
+  sample_output: SampleOutput | null;
+  sample_inputs: SampleInput[];
+  hitl_gates: HitlGate[];
+  wds_summary: WdsSummary | null;
+  open_questions: Question[];
+  session_id: string | null;
+}): Promise<void> {
+  const slug = pack.sample_output?.output_name?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'workflow';
+
+  // Preferred: the authoritative handoff contract from the server.
+  if (pack.session_id) {
+    try {
+      const res = await fetch(`/api/factory/swarm1/handoff?session_id=${encodeURIComponent(pack.session_id)}`);
+      if (res.ok) {
+        const handoff = await res.json();
+        downloadJson(handoff, slug);
+        return;
+      }
+    } catch { /* fall through to the client-assembled pack */ }
+  }
+
+  // Fallback: assemble from local React state (local/no-DB dev, or endpoint
+  // unreachable). Same fields, minus the full WDS the server would attach.
+  downloadJson({
+    boverse_simulation_pack_version: 1,
+    handoff_source: 'client_fallback',
+    session_id: pack.session_id,
+    setup_intake: pack.setup_intake,
+    sample_output: pack.sample_output,
+    sample_inputs: pack.sample_inputs,
+    hitl_gates: pack.hitl_gates,
+    wds_summary: pack.wds_summary,
+    open_questions: pack.open_questions,
+  }, slug);
+}
+
 function SetupBlock({ setup, onChange }: { setup: SetupIntake; onChange: (s: SetupIntake) => void }) {
-  const filledCount = (Object.values(setup) as string[]).filter((v) => v.trim().length > 0).length;
+  const filledCount = setupFilledCount(setup);
   return (
     <details className="sw-card" open={filledCount > 0}>
       <summary className="cursor-pointer px-4 py-3.5 flex items-center justify-between">
@@ -418,7 +566,7 @@ function SetupBlock({ setup, onChange }: { setup: SetupIntake; onChange: (s: Set
           Setup / a few quick details (optional)
         </span>
         <span className="sw-mono text-[10px] tracking-widest sw-muted-2">
-          {filledCount > 0 ? `${filledCount} of 4 filled` : 'tap to expand'}
+          {filledCount > 0 ? `${filledCount} of ${SETUP_TOTAL} filled` : 'tap to expand'}
         </span>
       </summary>
       <div className="px-4 pb-5 pt-1 space-y-5">
@@ -436,6 +584,21 @@ function SetupBlock({ setup, onChange }: { setup: SetupIntake; onChange: (s: Set
           placeholder="e.g. Customers email us a brief. Or: weekly Excel export from Salesforce. Or: a HubSpot deal moves to ‘Proposal’."
           value={setup.source}
           onChange={(v) => onChange({ ...setup, source: v })}
+        />
+        <SetupModeField
+          id="setup-source-mode"
+          label="How does it arrive?"
+          hint="The way the work physically shows up. Lets the build team know whether to wire an API or a batch job."
+          value={setup.sourceMode}
+          onChange={(v) => onChange({ ...setup, sourceMode: v })}
+        />
+        <SetupField
+          id="setup-filetypes"
+          label="What types of files will you upload?"
+          hint="Helps Discovery know what to expect — emails, spreadsheets, PDFs, screenshots, exports."
+          placeholder="e.g. .eml emails, .xlsx rate cards, PDFs of past proposals, .csv exports from our CRM, screenshots of the QuickBooks invoice screen."
+          value={setup.fileTypes}
+          onChange={(v) => onChange({ ...setup, fileTypes: v })}
         />
 
         <SetupField
@@ -455,6 +618,13 @@ function SetupBlock({ setup, onChange }: { setup: SetupIntake; onChange: (s: Set
           value={setup.destination}
           onChange={(v) => onChange({ ...setup, destination: v })}
         />
+        <SetupModeField
+          id="setup-destination-mode"
+          label="How should the result leave?"
+          hint="The way it goes back out — same vocabulary as the inbound side, so both ends are explicit."
+          value={setup.destinationMode}
+          onChange={(v) => onChange({ ...setup, destinationMode: v })}
+        />
 
         <SetupField
           id="setup-connection"
@@ -466,6 +636,33 @@ function SetupBlock({ setup, onChange }: { setup: SetupIntake; onChange: (s: Set
         />
       </div>
     </details>
+  );
+}
+
+// Connection-mode select. The structured counterpart to the free-text source /
+// destination fields above — what the downstream swarm reads to decide whether
+// to wire an API client, a batch job, or a mailbox poller.
+function SetupModeField({
+  id, label, hint, value, onChange,
+}: {
+  id: string; label: string; hint: string;
+  value: ConnectionMode; onChange: (v: ConnectionMode) => void;
+}) {
+  return (
+    <div>
+      <label htmlFor={id} className="block text-sm mb-1" style={{ color: 'var(--ink)' }}>{label}</label>
+      <p className="sw-muted text-[11px] mb-2" style={{ maxWidth: '60ch' }}>{hint}</p>
+      <select
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value as ConnectionMode)}
+        className="sw-field w-full text-sm p-3"
+      >
+        {CONNECTION_MODE_OPTIONS.map((o) => (
+          <option key={o.value} value={o.value}>{o.label}</option>
+        ))}
+      </select>
+    </div>
   );
 }
 

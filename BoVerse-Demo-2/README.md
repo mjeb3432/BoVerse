@@ -1,17 +1,17 @@
-# BoVerse-Demo-2 — Flint & Tinder simulation pack
+# BoVerse-Demo-2 — sample evidence pack (Flint & Tinder)
 
-This is the canonical worked example BoVerse ships with: a Calgary
-creative agency (Flint & Tinder) turning an inbound brief from a
-returning client (Northstar Brewing, "Cold Front" IPA Q3 launch) into a
-single priced proposal.
+This folder is a **sample evidence pack** — not a simulation pack. The
+simulation pack is what BoVerse *produces* per user, per session, by
+running Discovery against whatever evidence the user uploads. This
+pack is just one realistic set of evidence to feed in for a first run.
 
-It classifies as a **`sharp_point_solution`** — one trigger, one
-artifact, one human-review gate — and is the smallest archetype the
-system supports. If a customer's workflow is more complex than this,
-BoVerse will still discover it, but this pack is the right place to
-start when introducing the system.
+The scenario: a Calgary creative agency (Flint & Tinder) turning an
+inbound brief from a returning client (Northstar Brewing, "Cold Front"
+IPA Q3 launch) into a single priced proposal. It classifies as a
+**`sharp_point_solution`** — one trigger, one artifact, one
+human-review gate.
 
-## Files
+## Files (evidence only)
 
 | File | Role |
 |---|---|
@@ -20,28 +20,36 @@ start when introducing the system.
 | `03_pricing_rules.json` | Deterministic pricing rules (multiplier-before-discount, repeat-client thresholds, media pass-through) |
 | `04_internal_playbook.md` | The judgment layer — the agency's SOP |
 | `05_past_winning_proposal.txt` | A prior accepted proposal (Aurora launch) — the format and bar |
-| `EXPECTED-OUTPUT.md` | What BoVerse should produce when fed the five files above ($39,401.25) |
-| `SIMULATION-RUNBOOK.md` | Step-by-step for running the demo and what to look for at each gate |
+| `SIMULATION-RUNBOOK.md` | Step-by-step for running BoVerse against this evidence |
 
-## Why this pack matters
+There is **no `EXPECTED-OUTPUT.md` or `EXPECTED-OUTPUT.json`** in this
+folder by design. The expected output is the live, per-session
+simulation pack BoVerse generates for you when you run Discovery
+against this evidence. Use the **Download simulation pack** button in
+the review surface to take that generated pack with you.
 
-A simulation pack is the way BoVerse demonstrates value **before the
-client commits any real data**. The flow is:
+## Why this matters
 
-1. Show the client the brief (their reality).
-2. Show the client the expected proposal (the deliverable they'd want).
-3. Run the system and confirm the deliverable falls out.
-4. Then — and only then — ask them to drop in their real files.
+A simulation pack is not a fixture — it is the *deliverable* of
+Discovery. Every BoVerse run produces:
 
-[EXPECTED-OUTPUT.md](EXPECTED-OUTPUT.md) is what makes step 2 possible
-without running the system. [SIMULATION-RUNBOOK.md](SIMULATION-RUNBOOK.md)
-is what makes step 3 reliable.
+- a draft of the final artifact the user actually wants (e.g. a priced
+  proposal),
+- the per-run inputs that would have to exist to produce it (back-solved
+  from the artifact),
+- the sign-off gates that govern it,
+- the structured Setup answers that anchor the workflow.
 
-## The handoff
+That bundle — generated per session — is what gets handed off to the
+downstream Build swarm in another app. Committing a static
+"expected output" would have made the pack look like a stand-alone
+template, and that is the opposite of what BoVerse does.
 
-Per the BoVerse model, this app's job ends at Discovery + sample
-approval. The approved bundle — spec + sample output + rules registry +
-the Setup answers from the new pre-upload intake — is then handed off
-to a downstream Build swarm in another application for execution. This
-pack exercises that handoff: every artifact in it is something the
-downstream swarm needs to actually build the workflow.
+## When to swap in real data
+
+When the demo lands and the client is ready to use their own data,
+replace the five evidence files above with their real briefs / rate
+cards / rules / playbooks, re-fill the Setup form with their real
+source / output / destination / sign-off, and run `/factory` again.
+Same flow. Different inputs. Different per-session simulation pack
+on the way out.
