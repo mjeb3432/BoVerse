@@ -348,11 +348,19 @@ export default function FactoryPage() {
                 <div className="flex items-center justify-between mb-3">
                   <div className="sw-kicker">Sample output / {sampleOutput.output_name.toUpperCase()}</div>
                   <button
-                    onClick={() => copyOutputAsJson(sampleOutput)}
+                    onClick={() => downloadSimulationPack({
+                      setup_intake: setup,
+                      sample_output: sampleOutput,
+                      sample_inputs: sampleInputs,
+                      hitl_gates: hitlGates,
+                      wds_summary: wds,
+                      open_questions: questions,
+                      session_id: sessionId,
+                    })}
                     className="sw-btn ghost sm"
-                    title="Copy the output as a JSON contract the downstream build swarm can consume."
+                    title="Download the per-session simulation pack — your Setup answers, sample output, sample inputs, and sign-off gates — as one JSON file for the downstream build team."
                   >
-                    Copy as JSON
+                    Download simulation pack
                   </button>
                 </div>
                 <div className="glass p-5 lg:p-6">
@@ -490,25 +498,43 @@ export default function FactoryPage() {
 // Pre-upload Setup — collapsed by default so it doesn't crowd the intake. When
 // the user expands and fills in any field, it surfaces a "N of N filled" hint
 // next to the summary so they know the answers are being carried into Discover.
-// Copy the sample output as a structured-JSON contract. The downstream Build
-// swarm consumes this shape directly — `rendered_sample` is the human-readable
-// view, `computed_fields` / `required_sections` / `required_fields` are the
-// machine view. Wrapping both in a single payload keeps the two views in sync.
-async function copyOutputAsJson(output: SampleOutput): Promise<void> {
+// Download the per-session simulation pack as a single JSON file. This is the
+// artifact that hands off to the downstream Build swarm — generated for THIS
+// session against THIS user's evidence + Setup answers. Not a fixture; not
+// reusable across sessions; no two runs produce the same pack.
+function downloadSimulationPack(pack: {
+  setup_intake: SetupIntake;
+  sample_output: SampleOutput | null;
+  sample_inputs: SampleInput[];
+  hitl_gates: HitlGate[];
+  wds_summary: WdsSummary | null;
+  open_questions: Question[];
+  session_id: string | null;
+}): void {
   const payload = {
-    output_name: output.output_name,
-    output_type: output.output_type,
-    output_format: output.output_format,
-    required_sections: output.required_sections,
-    computed_fields: output.computed_fields,
-    rendered_sample: output.rendered_sample,
+    boverse_simulation_pack_version: 1,
+    generated_at: new Date().toISOString(),
+    session_id: pack.session_id,
+    setup_intake: pack.setup_intake,
+    sample_output: pack.sample_output,
+    sample_inputs: pack.sample_inputs,
+    hitl_gates: pack.hitl_gates,
+    wds_summary: pack.wds_summary,
+    open_questions: pack.open_questions,
   };
   const json = JSON.stringify(payload, null, 2);
   try {
-    if (typeof navigator !== 'undefined' && navigator.clipboard) {
-      await navigator.clipboard.writeText(json);
-    }
-  } catch { /* user can still copy from the rendered view */ }
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const slug = pack.sample_output?.output_name?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'workflow';
+    a.download = `boverse-simulation-pack-${slug}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch { /* leave the rendered view in place — nothing else to do */ }
 }
 
 function SetupBlock({ setup, onChange }: { setup: SetupIntake; onChange: (s: SetupIntake) => void }) {

@@ -27,7 +27,7 @@ The formal framework lives in `docs/workflow-creator/` (the implementation-agnos
 | `landing/` | The app: marketing site + `/factory` two-swarm workflow factory (Next.js 16, React 19, Tailwind 4, TypeScript). |
 | `landing/migrations/` | Postgres schema (0001–0006: sessions + RAG + the canonical store + build artifacts). Apply with `node scripts/migrate.mjs`. |
 | `docs/workflow-creator/` | The Workflow Creator framework corpus (00–11), business-user drafts, and implementation notes. |
-| `BoVerse-Demo-2/` | Flint & Tinder simulation pack (creative-agency brief → priced proposal) — 5 evidence files, the expected output, and a runbook so the client sees a working iteration before swapping in real data. |
+| `BoVerse-Demo-2/` | Flint & Tinder sample **evidence** pack (creative-agency brief → priced proposal) — 5 realistic files and a runbook. The *simulation pack* itself is generated per session by BoVerse from this evidence + your Setup answers, not stored here. |
 
 ## Quick start
 
@@ -40,7 +40,7 @@ npm install
 npm run dev
 ```
 
-Opens http://localhost:3000. Go to `/factory`, answer the optional **Setup** questions (where work comes from, what you want to produce, where it lands, sign-off), describe the outcome, and drop in the five files from `BoVerse-Demo-2/`. The expected priced proposal (~$39,401.25 CAD) plus a step-by-step are in [`BoVerse-Demo-2/EXPECTED-OUTPUT.md`](BoVerse-Demo-2/EXPECTED-OUTPUT.md) and [`BoVerse-Demo-2/SIMULATION-RUNBOOK.md`](BoVerse-Demo-2/SIMULATION-RUNBOOK.md).
+Opens http://localhost:3000. Go to `/factory`, answer the optional **Setup** questions (where work comes from, what you want to produce, where it lands, sign-off), describe the outcome, and drop in the five evidence files from `BoVerse-Demo-2/`. BoVerse generates a fresh **simulation pack** for your session (sample output + sample inputs + sign-off gates + your Setup answers); download it with the button in the review surface to hand off to the downstream build team. Step-by-step: [`BoVerse-Demo-2/SIMULATION-RUNBOOK.md`](BoVerse-Demo-2/SIMULATION-RUNBOOK.md).
 
 **Other scripts:** `npm run build` (production build), `npm run lint`, `npm run dev:plain` (no auto-open).
 
