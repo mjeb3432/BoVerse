@@ -62,11 +62,26 @@ export async function POST(req: Request) {
   await saveProjections(sessionId, wds, simulation);
   await setSessionStage(sessionId, 'specify');
 
+  // Surface every human-in-the-loop gate the canonical store knows about. The
+  // review surface renders these as a dedicated "Sign-off gates" panel so the
+  // business user can see every approval point in one place — not buried in
+  // the operator drawer.
+  const hitl_gates = store.hitl
+    .filter((h) => h.workflow_stage || h.human_role || h.reason_for_review)
+    .map((h) => ({
+      workflow_stage: h.workflow_stage,
+      human_role: h.human_role,
+      reason_for_review: h.reason_for_review,
+      review_trigger: h.review_trigger,
+      approval_required: h.approval_required,
+    }));
+
   return NextResponse.json({
     workflow_id: workflowId,
     build_readiness: wds.build_recommendation.build_readiness,
     sample_output: simulation.sample_output,
     sample_inputs: simulation.sample_inputs,
+    hitl_gates,
     open_questions: store.gaps
       .filter((g) => g.resolution_status === 'asked')
       .map((g) => ({ gap_id: g.gap_id, suggested_question: g.suggested_question, severity: g.severity })),

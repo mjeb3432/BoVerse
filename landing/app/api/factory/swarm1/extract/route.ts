@@ -17,9 +17,11 @@ import {
   validateInvariants,
 } from '@/lib/canonical';
 import {
+  CONNECTION_MODES,
   ExtractionEnvelopeSchema,
   extractionSystemPrompt,
   mapExtractionToStore,
+  type ConnectionMode,
   type ExtractionEnvelope,
   type SetupIntake,
 } from '@/lib/registry';
@@ -175,9 +177,14 @@ async function persistArtifacts(sessionId: string, parsed: Parsed[]) {
 }
 
 // Parse the optional Setup intake JSON blob from FormData. Lenient: any non-
-// string fields are dropped, an unparseable blob returns null, and a fully
-// empty payload returns null so downstream callers can treat "no setup
-// provided" the same as "missing" (the prompt collapses cleanly).
+// string fields are dropped, unknown ConnectionMode values fall back to
+// 'unknown', an unparseable blob returns null, and a fully empty payload
+// returns null so downstream callers can treat "no setup provided" the same
+// as "missing" (the prompt collapses cleanly).
+function coerceMode(v: unknown): ConnectionMode {
+  return typeof v === 'string' && (CONNECTION_MODES as string[]).includes(v)
+    ? (v as ConnectionMode) : 'unknown';
+}
 function parseSetupIntake(raw: FormDataEntryValue | null): SetupIntake | null {
   if (typeof raw !== 'string' || raw.trim().length === 0) return null;
   let parsed: unknown;
@@ -186,11 +193,16 @@ function parseSetupIntake(raw: FormDataEntryValue | null): SetupIntake | null {
   const obj = parsed as Record<string, unknown>;
   const out: SetupIntake = {
     source: typeof obj.source === 'string' ? obj.source.trim() : '',
+    sourceMode: coerceMode(obj.sourceMode),
+    fileTypes: typeof obj.fileTypes === 'string' ? obj.fileTypes.trim() : '',
     output: typeof obj.output === 'string' ? obj.output.trim() : '',
     destination: typeof obj.destination === 'string' ? obj.destination.trim() : '',
+    destinationMode: coerceMode(obj.destinationMode),
     connection: typeof obj.connection === 'string' ? obj.connection.trim() : '',
   };
-  const empty = !out.source && !out.output && !out.destination && !out.connection;
+  const empty =
+    !out.source && !out.fileTypes && !out.output && !out.destination && !out.connection &&
+    out.sourceMode === 'unknown' && out.destinationMode === 'unknown';
   return empty ? null : out;
 }
 

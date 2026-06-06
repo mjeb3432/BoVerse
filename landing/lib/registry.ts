@@ -153,15 +153,35 @@ export const ExtractionEnvelopeSchema = z.object({
 export type ExtractionEnvelope = z.infer<typeof ExtractionEnvelopeSchema>;
 
 // ─── Pre-upload Setup intake ────────────────────────────────────────────────
-// Four plain-English answers the business user gives BEFORE uploading evidence.
-// All free-text. The Discovery LLM uses these as additional grounding alongside
-// the stated outcome — they make the inferred source_system, output_format, and
-// connection_type more deterministic without requiring schema work upstream.
+// Plain-English answers the business user gives BEFORE uploading evidence.
+// The Discovery LLM uses these as additional grounding alongside the stated
+// outcome — they make the inferred source_system, output_format, and
+// connection_type more deterministic, and they become a structured
+// integration-points record that travels with the bundle into the downstream
+// Build swarm at handoff.
+//
+// The text fields stay free-form (non-technical users can describe their
+// stack however they like). The *_mode fields are a small typed vocabulary
+// the downstream swarm can switch on directly.
+export type ConnectionMode =
+  | 'batch_upload'      // files I upload by hand, periodically
+  | 'api'               // live API / system integration
+  | 'email'             // forwarded emails or send-to mailbox
+  | 'periodic_export'   // CSV / XLSX exports on a schedule
+  | 'webhook'           // push-based event delivery
+  | 'unknown';          // user hasn't decided yet
+export const CONNECTION_MODES: ConnectionMode[] = [
+  'batch_upload', 'api', 'email', 'periodic_export', 'webhook', 'unknown',
+];
+
 export interface SetupIntake {
-  source: string;        // "where does the work come in from"
-  output: string;        // "what do you want to produce"
-  destination: string;   // "where should the result land"
-  connection: string;    // "specific connection details or sign-off contact"
+  source: string;                // "where does the work come in from" (free text)
+  sourceMode: ConnectionMode;    // structured input mode
+  fileTypes: string;             // "what types of files are you uploading"
+  output: string;                // "what do you want to produce"
+  destination: string;           // "where should the result land" (free text)
+  destinationMode: ConnectionMode; // structured output mode
+  connection: string;            // "specific connection details or sign-off contact"
 }
 
 // Render the Setup intake into a compact prompt block. Returns '' if nothing
@@ -170,8 +190,11 @@ function setupBlock(setup: SetupIntake | null): string {
   if (!setup) return '';
   const lines: string[] = [];
   if (setup.source.trim()) lines.push(`- Source / how work arrives: ${setup.source.trim()}`);
+  if (setup.sourceMode && setup.sourceMode !== 'unknown') lines.push(`- Source delivery mode (structured): ${setup.sourceMode}`);
+  if (setup.fileTypes.trim()) lines.push(`- Expected file types: ${setup.fileTypes.trim()}`);
   if (setup.output.trim()) lines.push(`- Desired output: ${setup.output.trim()}`);
   if (setup.destination.trim()) lines.push(`- Destination / where output lands: ${setup.destination.trim()}`);
+  if (setup.destinationMode && setup.destinationMode !== 'unknown') lines.push(`- Destination delivery mode (structured): ${setup.destinationMode}`);
   if (setup.connection.trim()) lines.push(`- Connection or sign-off note: ${setup.connection.trim()}`);
   if (lines.length === 0) return '';
   return `The user also answered a short Setup form. Treat these as ground truth (over inference) for source_system, output_format, system_connector, and human_review attributes:\n${lines.join('\n')}\n`;
