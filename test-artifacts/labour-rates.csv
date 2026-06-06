@@ -1,9 +1,0 @@
-trade,base_rate_per_hour,after_hours_rate,heritage_multiplier,client_category_property_mgmt,client_category_government
-journeyman_electrician,95,142.50,1.4,85,80
-apprentice_electrician,55,82.50,1.4,50,47
-master_electrician,125,187.50,1.4,115,108
-specialty_panel_tech,135,202.50,1.4,125,115
-inspector_signoff,180,270.00,1.0,170,160
-travel_zone_a,0,0,1.0,0,0
-travel_zone_b,45,67.50,1.0,40,38
-travel_zone_c,90,135.00,1.0,80,75
