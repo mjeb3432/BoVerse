@@ -43,7 +43,23 @@ function simulateSystemPrompt(store: CanonicalStore, grounding: string): string 
     .map((r) => `- ${r.rule_name}: WHEN ${r.condition ?? '(unspecified)'} THEN ${r.action ?? '(unspecified)'}${r.threshold ? ` [${r.threshold}]` : ''}`)
     .join('\n');
 
+  // Canonical identity — always available (deterministic), independent of RAG.
+  // This anchors the sample to the ACTUAL client/problem so it stays grounded
+  // even when embedding-based grounding is unavailable (e.g. the embeddings
+  // provider is down) — otherwise the model invents a generic placeholder
+  // company instead of using the real one from the evidence.
+  const id = store.identity;
+  const idLines = [
+    id.client_name ? `- client: ${id.client_name}` : null,
+    id.workflow_name ? `- workflow: ${id.workflow_name}` : null,
+    id.stated_problem ? `- the client's request (verbatim): ${id.stated_problem}` : null,
+    id.primary_objective ? `- objective: ${id.primary_objective}` : null,
+  ].filter(Boolean).join('\n');
+
   return `You are BoVerse's simulation engine. Produce the TWO surfaces a non-technical business owner will review. Work OUTPUT-FIRST, then back-solve the inputs.
+
+THE CLIENT / CONTEXT (use these REAL names — never invent a placeholder company when a real one is given):
+${idLines || '- (no client captured — keep the example plausible and internally consistent)'}
 
 THE DELIVERABLE (output) to render:
 - name: ${out?.output_name ?? 'Output'} (${out?.output_type ?? 'document'}, ${out?.output_format ?? 'document'})
@@ -57,7 +73,7 @@ THE PER-RUN INPUTS to fabricate realistic examples for (one example per input, g
 ${runtimeInputs.map((i) => `- ${i.input_name} (${i.format})`).join('\n') || '- (infer the inputs the deliverable needs)'}
 
 GROUNDING EVIDENCE (use real names/numbers/structures from here so the sample is believable):
-${grounding || '(none retrieved — keep the example plausible and internally consistent)'}
+${grounding || '(no embedding-based grounding retrieved — rely on THE CLIENT / CONTEXT above and the rules; do NOT invent a different company name)'}
 
 Return:
 1. sample_inputs: for EACH per-run input, a realistic example_value_json (valid JSON) and a short business-readable "rendered" string a non-technical owner would recognize.

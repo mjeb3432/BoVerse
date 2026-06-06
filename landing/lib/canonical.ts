@@ -180,27 +180,41 @@ export async function setSessionStage(sessionId: string, stage: string): Promise
 // column (migration 0007). Memory map for local / no-DB sessions.
 const SETUP_INTAKE = new Map<string, unknown>();
 
+// Persisting / reading the Setup answers is a BEST-EFFORT side-effect: it must
+// never break discovery. If the setup_intake column is missing (migration 0007
+// not yet applied) or any DB error occurs, we degrade gracefully — save no-ops
+// and read returns null — rather than 500-ing the extract / gaps / handoff
+// routes. (Apply migration 0007 to restore persistence.)
 export async function saveSetupIntake(sessionId: string, setup: unknown): Promise<void> {
   if (setup == null) return;
   if (!HAS_DATABASE || sessionId.startsWith('local-')) {
     SETUP_INTAKE.set(sessionId, setup);
     return;
   }
-  await query('update workflow_sessions set setup_intake = $1 where id = $2', [
-    JSON.stringify(setup),
-    sessionId,
-  ]);
+  try {
+    await query('update workflow_sessions set setup_intake = $1 where id = $2', [
+      JSON.stringify(setup),
+      sessionId,
+    ]);
+  } catch (err) {
+    console.warn('[canonical] saveSetupIntake skipped (is migration 0007 applied?):', (err as Error).message);
+  }
 }
 
 export async function getSetupIntake(sessionId: string): Promise<unknown | null> {
   if (!HAS_DATABASE || sessionId.startsWith('local-')) {
     return SETUP_INTAKE.get(sessionId) ?? null;
   }
-  const r = await query<{ setup_intake: unknown }>(
-    'select setup_intake from workflow_sessions where id = $1',
-    [sessionId],
-  );
-  return r?.rows[0]?.setup_intake ?? null;
+  try {
+    const r = await query<{ setup_intake: unknown }>(
+      'select setup_intake from workflow_sessions where id = $1',
+      [sessionId],
+    );
+    return r?.rows[0]?.setup_intake ?? null;
+  } catch (err) {
+    console.warn('[canonical] getSetupIntake returned null (is migration 0007 applied?):', (err as Error).message);
+    return null;
+  }
 }
 
 // ─── derived-projection persistence (WDS + Simulation Pack) ──────────────────
