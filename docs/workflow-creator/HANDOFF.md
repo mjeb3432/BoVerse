@@ -57,12 +57,37 @@ evidence ─▶ Swarm 1 (Discovery, this app) ─▶ HANDOFF (export boundary)
     "connection": "…"
   },
 
+  // Configuration 0 — the six named Discovery outputs (see next section).
+  "discovery_package": { /* blueprint, classification, registry, canonical_schema, rules_wiki, simulation_pack */ },
+
   // The canonical Swarm 1 → Swarm 2 contract (Swarm2Input).
   "wds":        { /* Workflow Design Specification — the deterministic blueprint */ },
   "simulation": { /* Simulation Pack — sample output + sample inputs + step trace */ },
   "approval":   { /* Approval record — `approved` is false until the user approves */ }
 }
 ```
+
+## Configuration 0 — the six named Discovery outputs
+
+Discovery (the Workflow Creator itself) produces a fixed set of artifacts that
+answer **"What should we build?"** *before* any build runs. They are exposed as
+a single package at **`GET /api/factory/swarm1/blueprint?session_id=<id>`**
+(also embedded in the handoff envelope as `discovery_package`), and surfaced to
+the user as the "Discovery outputs" panel in the review surface.
+
+| # | Output | What it is | Source |
+|---|---|---|---|
+| 1 | `workflow_blueprint` | The deterministic spec (the WDS) | `lib/wds.ts` |
+| 2 | `workflow_classification` | Archetype + the `what_to_build` answer (required / optional / **unnecessary** components) | `rules-engine.ts` |
+| 3 | `registry` | The recurring attributes the workflow extracts/produces/uses | projected from the store |
+| 4 | `canonical_schema` | The populated canonical data model (13-table store) | `migrations/0005` |
+| 5 | `rules_wiki` | The business rules, as a ruleset + wiki | `decision_rule` rows |
+| 6 | `simulation_pack` | Sample output + the inputs that produce it (null until `/specify`) | `lib/simulation.ts` |
+
+All six are a **pure projection** of the canonical store (+ the generated
+simulation) — no LLM, no build. `lib/discovery-package.ts` assembles them. The
+Swarm-2 build objects `registry`, `rules_wiki`, and `canonical_tables` are
+realizations of outputs 3–5; this package is the discovery-time source.
 
 `wds`, `simulation`, and `approval` are validated by the Zod schemas in
 `contract.ts`. The downstream swarm should validate against

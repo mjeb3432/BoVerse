@@ -29,6 +29,9 @@ interface SampleInput { input_name: string; input_type: string; format: string; 
 interface SampleOutput { output_name: string; output_type: string; output_format: string; required_sections: string[]; rendered_sample: string; computed_fields: Record<string, unknown> }
 interface WdsSummary { primary_archetype: string; complexity: string; overall_confidence: number; required_components: string[]; unnecessary_components: string[] }
 interface HitlGate { workflow_stage: string | null; human_role: string | null; reason_for_review: string | null; review_trigger: string | null; approval_required: boolean }
+// Counts derived from the Discovery Package (/blueprint) — the six named
+// Configuration-0 outputs, summarized for the review panel.
+interface DiscoverySummary { archetype: string; registry_attributes: number; canonical_tables: number; rules: number; required_components: string[]; unnecessary_components: string[]; has_simulation: boolean }
 
 // Pre-upload Setup — plain-English questions that anchor Discovery before it
 // reads the evidence. Every field is optional. Free-text fields let the user
@@ -102,6 +105,7 @@ export default function FactoryPage() {
   const [sampleOutput, setSampleOutput] = useState<SampleOutput | null>(null);
   const [sampleInputs, setSampleInputs] = useState<SampleInput[]>([]);
   const [hitlGates, setHitlGates] = useState<HitlGate[]>([]);
+  const [discovery, setDiscovery] = useState<DiscoverySummary | null>(null);
   const [wds, setWds] = useState<WdsSummary | null>(null);
   const [comment, setComment] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
@@ -133,7 +137,28 @@ export default function FactoryPage() {
     setSampleInputs(data.sample_inputs ?? []);
     setHitlGates(data.hitl_gates ?? []);
     setWds(data.wds_summary ?? null);
+    void loadDiscovery(sid);
     setPhase('review');
+  }
+
+  // Fetch the six named Configuration-0 (Discovery) outputs and summarize them
+  // for the "Discovery outputs" panel. Best-effort: a failure just hides the
+  // panel, it doesn't block review.
+  async function loadDiscovery(sid: string) {
+    try {
+      const res = await fetch(`/api/factory/swarm1/blueprint?session_id=${encodeURIComponent(sid)}`);
+      if (!res.ok) return;
+      const p = await res.json();
+      setDiscovery({
+        archetype: p?.workflow_classification?.primary_archetype ?? 'unknown',
+        registry_attributes: p?.registry?.count ?? 0,
+        canonical_tables: (p?.canonical_schema?.populated_tables ?? []).length,
+        rules: p?.rules_wiki?.count ?? 0,
+        required_components: p?.workflow_classification?.what_to_build?.required_components ?? [],
+        unnecessary_components: p?.workflow_classification?.what_to_build?.unnecessary_components ?? [],
+        has_simulation: p?.simulation_pack != null,
+      });
+    } catch { /* panel stays hidden */ }
   }
 
   async function discover() {
@@ -378,6 +403,8 @@ export default function FactoryPage() {
                 )}
               </section>
 
+              {discovery && <DiscoveryPanel discovery={discovery} sessionId={sessionId} />}
+
               {hitlGates.length > 0 && (
                 <section>
                   <div className="sw-kicker mb-3">Sign-off gates / human review points</div>
@@ -495,22 +522,24 @@ export default function FactoryPage() {
   );
 }
 
-// Pre-upload Setup — collapsed by default so it doesn't crowd the intake. When
-// the user expands and fills in any field, it surfaces a "N of N filled" hint
-// next to the summary so they know the answers are being carried into Discover.
-// Trigger a browser download of a JSON object.
-function downloadJson(obj: unknown, slug: string): void {
+// Trigger a browser download of a JSON object under the given filename.
+function downloadJson(obj: unknown, filename: string): void {
   try {
     const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `boverse-simulation-pack-${slug || 'workflow'}.json`;
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   } catch { /* leave the rendered view in place — nothing else to do */ }
+}
+
+// Slug a name for a download filename.
+function nameSlug(name: string | null | undefined): string {
+  return name?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'workflow';
 }
 
 // Download the per-session simulation pack. Single source of truth is the
@@ -527,7 +556,7 @@ async function downloadSimulationPack(pack: {
   open_questions: Question[];
   session_id: string | null;
 }): Promise<void> {
-  const slug = pack.sample_output?.output_name?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'workflow';
+  const filename = `boverse-simulation-pack-${nameSlug(pack.sample_output?.output_name)}.json`;
 
   // Preferred: the authoritative handoff contract from the server.
   if (pack.session_id) {
@@ -535,7 +564,7 @@ async function downloadSimulationPack(pack: {
       const res = await fetch(`/api/factory/swarm1/handoff?session_id=${encodeURIComponent(pack.session_id)}`);
       if (res.ok) {
         const handoff = await res.json();
-        downloadJson(handoff, slug);
+        downloadJson(handoff, filename);
         return;
       }
     } catch { /* fall through to the client-assembled pack */ }
@@ -553,7 +582,64 @@ async function downloadSimulationPack(pack: {
     hitl_gates: pack.hitl_gates,
     wds_summary: pack.wds_summary,
     open_questions: pack.open_questions,
-  }, slug);
+  }, filename);
+}
+
+// Download the full Discovery Package (the six named Configuration-0 outputs)
+// straight from the /blueprint endpoint.
+async function downloadDiscoveryPackage(sessionId: string | null): Promise<void> {
+  if (!sessionId) return;
+  try {
+    const res = await fetch(`/api/factory/swarm1/blueprint?session_id=${encodeURIComponent(sessionId)}`);
+    if (!res.ok) return;
+    const pkg = await res.json();
+    const name = pkg?.workflow_blueprint?.workflow_name ?? pkg?.workflow_classification?.primary_archetype;
+    downloadJson(pkg, `boverse-discovery-package-${nameSlug(name)}.json`);
+  } catch { /* nothing else to do */ }
+}
+
+// The six named Discovery (Configuration 0) outputs, surfaced as a manifest so
+// the user can see — and download — exactly what Discovery produced before any
+// build runs. Counts come from /blueprint via loadDiscovery().
+function DiscoveryPanel({ discovery, sessionId }: { discovery: DiscoverySummary; sessionId: string | null }) {
+  const outputs: { name: string; desc: string; badge: string }[] = [
+    { name: 'Workflow Blueprint', desc: 'The deterministic spec (outputs, inputs, steps, build posture).', badge: 'ready' },
+    { name: 'Workflow Classification', desc: 'What kind of workflow this is, and what to build.', badge: discovery.archetype },
+    { name: 'Registry', desc: 'The recurring attributes the workflow uses.', badge: `${discovery.registry_attributes} attr` },
+    { name: 'Canonical Schema', desc: 'The populated data model for this workflow.', badge: `${discovery.canonical_tables} tables` },
+    { name: 'Rules Wiki', desc: 'The business rules extracted from your evidence.', badge: `${discovery.rules} rules` },
+    { name: 'Simulation Pack', desc: 'The sample output and the inputs that produce it.', badge: discovery.has_simulation ? 'ready' : '—' },
+  ];
+  return (
+    <section>
+      <div className="flex items-center justify-between mb-3">
+        <div className="sw-kicker">Discovery outputs / what we produced</div>
+        <button
+          onClick={() => downloadDiscoveryPackage(sessionId)}
+          className="sw-btn ghost sm"
+          title="Download all six named Discovery outputs (Blueprint, Classification, Registry, Canonical Schema, Rules Wiki, Simulation Pack) as one JSON file."
+        >
+          Download discovery package
+        </button>
+      </div>
+      <p className="sw-muted text-xs leading-relaxed mb-3" style={{ maxWidth: '60ch' }}>
+        The six things Discovery produces to answer <em>“what should we build?”</em> — before any build runs.
+        Build <strong>{discovery.required_components.length}</strong>, refuse{' '}
+        <strong>{discovery.unnecessary_components.length}</strong>.
+      </p>
+      <div className="sw-card divide-y" style={{ borderColor: 'var(--rule)' }}>
+        {outputs.map((o) => (
+          <div key={o.name} className="flex items-center justify-between gap-3 px-4 py-3 text-xs" style={{ borderColor: 'var(--rule)' }}>
+            <div>
+              <div style={{ color: 'var(--ink)' }}>{o.name}</div>
+              <div className="sw-muted-2 mt-0.5">{o.desc}</div>
+            </div>
+            <span className="sw-mono text-[10px] tracking-widest sw-muted-2 whitespace-nowrap">{o.badge}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
 }
 
 function SetupBlock({ setup, onChange }: { setup: SetupIntake; onChange: (s: SetupIntake) => void }) {

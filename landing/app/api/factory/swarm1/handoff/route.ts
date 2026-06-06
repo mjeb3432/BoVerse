@@ -24,6 +24,7 @@ import {
   getSetupIntake,
 } from '@/lib/canonical';
 import { buildWds } from '@/lib/wds';
+import { buildDiscoveryPackage } from '@/lib/discovery-package';
 import type { ApprovalRecord, SimulationPack, Wds } from '@/lib/swarm/contract';
 
 export const runtime = 'nodejs';
@@ -99,6 +100,11 @@ export async function GET(req: Request) {
     // The integration-points record (pre-upload Setup answers). Null if the
     // user skipped the Setup form.
     setup_intake: setup_intake ?? null,
+    // Configuration 0 — the six named Discovery outputs (Workflow Blueprint,
+    // Classification + the "what to build" answer, Registry, Canonical Schema,
+    // Rules Wiki, Simulation Pack). A projection of the same store/WDS/simulation
+    // below; included so the downstream builder gets the named set directly.
+    discovery_package: buildDiscoveryPackage(store, simulation),
     // The canonical Swarm 1 -> Swarm 2 contract. The downstream swarm consumes
     // these three exactly as the in-app Swarm 2 does.
     wds,
