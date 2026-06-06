@@ -3,9 +3,20 @@
 // POST builds the ledger; PATCH applies the user's answers.
 
 import { NextResponse } from 'next/server';
-import { getWorkflowIdForSession, getCanonical, saveCanonical, setSessionStage } from '@/lib/canonical';
+import { getWorkflowIdForSession, getCanonical, getSetupIntake, saveCanonical, setSessionStage } from '@/lib/canonical';
 import { analyzeGaps, prioritize, summarizeReadiness, applyAnswers } from '@/lib/gaps';
 import type { MissingInformation } from '@/lib/canonical-schema';
+
+// Flatten the persisted Setup answers into free-text signals for tech-stack
+// detection. The Setup "source"/"connection" fields routinely name the stack
+// (e.g. "weekly export from QuickBooks") — the richest signal we have.
+function setupSignals(setup: unknown): string[] {
+  if (!setup || typeof setup !== 'object') return [];
+  const o = setup as Record<string, unknown>;
+  return ['source', 'fileTypes', 'output', 'destination', 'connection']
+    .map((k) => (typeof o[k] === 'string' ? (o[k] as string) : ''))
+    .filter(Boolean);
+}
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -32,7 +43,8 @@ export async function POST(req: Request) {
   const store = await getCanonical(workflowId);
   if (!store) return NextResponse.json({ error: 'not_found' }, { status: 404 });
 
-  const gaps = analyzeGaps(store);
+  const setup = await getSetupIntake(sessionId);
+  const gaps = analyzeGaps(store, setupSignals(setup));
   const questions = prioritize(gaps);
   store.gaps = gaps;
   await saveCanonical(store);

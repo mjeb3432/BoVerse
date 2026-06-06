@@ -7,10 +7,16 @@
 
 import type { CanonicalStore, MissingInformation } from './canonical-schema';
 import { newFactId, makeProvenance } from './canonical';
+import { detectTechStacks } from './tech-stacks';
 
 type BuildReadiness = 'blocking' | 'ready' | 'ready_with_assumptions';
 
 const isRuntime = (t: string) => t === 'required_workflow_input' || t === 'both';
+
+// How many tech-stack clarifiers we'll surface as questions in one pass. The
+// rest are recorded as assumptions (kept in the ledger, not shown) so a stack
+// with many unknowns can't flood the user.
+const TECH_STACK_QUESTION_CAP = 4;
 
 function gap(
   partial: Partial<MissingInformation> & Pick<MissingInformation, 'missing_attribute' | 'why_it_matters' | 'severity' | 'blocking_status' | 'gap_kind'>,
@@ -59,8 +65,50 @@ function detectRuleConflicts(store: CanonicalStore): MissingInformation[] {
   return out;
 }
 
+/**
+ * Detect known tech stacks referenced in the evidence (and any extra signals,
+ * e.g. the pre-upload Setup answers) and emit a targeted clarifying question
+ * for each build-relevant detail the evidence leaves unresolved. These are the
+ * "what does this connect to" questions the discover phase should ask — e.g.
+ * QuickBooks Online vs Desktop, Salesforce API vs export, Excel upload vs
+ * shared drive. Non-blocking: if the user skips them they become assumptions,
+ * they never block the build.
+ */
+export function detectTechStackGaps(store: CanonicalStore, extraSignals: string[] = []): MissingInformation[] {
+  const signals: (string | null | undefined)[] = [
+    ...store.systems.map((s) => s.system_name),
+    ...store.inputs.map((i) => i.source_system),
+    store.identity.workflow_name,
+    store.identity.stated_problem,
+    store.identity.inferred_problem,
+    store.identity.primary_objective,
+    ...extraSignals,
+  ];
+  const hits = detectTechStacks(signals);
+  const out: MissingInformation[] = [];
+  for (const { stack, matchedSignal } of hits) {
+    for (const c of stack.clarifiers) {
+      if (c.resolvedBy && c.resolvedBy(matchedSignal)) continue; // already answered in the evidence
+      out.push(gap({
+        missing_attribute: `tech_stack: ${stack.id}.${c.id}`,
+        why_it_matters: c.why,
+        // Medium + non-blocking: a clarifier, not a blocker. It surfaces as a
+        // question in the discover phase (see prioritize) but never blocks the
+        // build — skipped clarifiers become recorded assumptions.
+        severity: 'medium',
+        blocking_status: 'non_blocking',
+        gap_kind: 'tech_stack',
+        suggested_question: c.question,
+        possible_sources: [stack.label],
+        confidence_score: 1,
+      }));
+    }
+  }
+  return out;
+}
+
 /** Build the full gap ledger. Preserves broken_link gaps already on the store. */
-export function analyzeGaps(store: CanonicalStore): MissingInformation[] {
+export function analyzeGaps(store: CanonicalStore, extraSignals: string[] = []): MissingInformation[] {
   const gaps: MissingInformation[] = [];
   gaps.push(...store.gaps.filter((g) => g.gap_kind === 'broken_link'));
 
@@ -94,6 +142,9 @@ export function analyzeGaps(store: CanonicalStore): MissingInformation[] {
 
   // ── conflicts ──
   gaps.push(...detectRuleConflicts(store));
+
+  // ── tech-stack probing (discover-phase "what does this connect to") ──
+  gaps.push(...detectTechStackGaps(store, extraSignals));
   return gaps;
 }
 
@@ -109,9 +160,14 @@ export function prioritize(gaps: MissingInformation[]): MissingInformation[] {
   // operator + audit, but never shown to the business user as a question — the
   // language ("…consumes an input that is not defined") is plumbing they can't
   // act on. They fall through to 'assumed' below so they don't block the build.
-  const questions = gaps
+  const blocking = gaps
     .filter((g) => g.gap_kind !== 'broken_link' && g.blocking_status === 'blocking' && (g.severity === 'critical' || g.severity === 'high'))
     .sort((a, b) => SEV_RANK[a.severity] - SEV_RANK[b.severity]);
+  // Tech-stack clarifiers are non-blocking but we DO surface them in the
+  // discover phase (capped) — they're the "what does this connect to"
+  // questions. Any beyond the cap fall through to 'assumed' below.
+  const techStack = gaps.filter((g) => g.gap_kind === 'tech_stack').slice(0, TECH_STACK_QUESTION_CAP);
+  const questions = [...blocking, ...techStack];
   const qset = new Set(questions);
   for (const g of gaps) {
     if (qset.has(g)) {
