@@ -498,11 +498,27 @@ export default function FactoryPage() {
 // Pre-upload Setup — collapsed by default so it doesn't crowd the intake. When
 // the user expands and fills in any field, it surfaces a "N of N filled" hint
 // next to the summary so they know the answers are being carried into Discover.
-// Download the per-session simulation pack as a single JSON file. This is the
-// artifact that hands off to the downstream Build swarm — generated for THIS
-// session against THIS user's evidence + Setup answers. Not a fixture; not
-// reusable across sessions; no two runs produce the same pack.
-function downloadSimulationPack(pack: {
+// Trigger a browser download of a JSON object.
+function downloadJson(obj: unknown, slug: string): void {
+  try {
+    const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `boverse-simulation-pack-${slug || 'workflow'}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch { /* leave the rendered view in place — nothing else to do */ }
+}
+
+// Download the per-session simulation pack. Single source of truth is the
+// server HANDOFF endpoint (the export boundary the downstream Build swarm
+// consumes) — so the file the user downloads is byte-for-byte what the
+// downstream swarm would fetch. Falls back to a client-assembled pack only
+// when the endpoint isn't available (local / no-DB dev sessions).
+async function downloadSimulationPack(pack: {
   setup_intake: SetupIntake;
   sample_output: SampleOutput | null;
   sample_inputs: SampleInput[];
@@ -510,10 +526,26 @@ function downloadSimulationPack(pack: {
   wds_summary: WdsSummary | null;
   open_questions: Question[];
   session_id: string | null;
-}): void {
-  const payload = {
+}): Promise<void> {
+  const slug = pack.sample_output?.output_name?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'workflow';
+
+  // Preferred: the authoritative handoff contract from the server.
+  if (pack.session_id) {
+    try {
+      const res = await fetch(`/api/factory/swarm1/handoff?session_id=${encodeURIComponent(pack.session_id)}`);
+      if (res.ok) {
+        const handoff = await res.json();
+        downloadJson(handoff, slug);
+        return;
+      }
+    } catch { /* fall through to the client-assembled pack */ }
+  }
+
+  // Fallback: assemble from local React state (local/no-DB dev, or endpoint
+  // unreachable). Same fields, minus the full WDS the server would attach.
+  downloadJson({
     boverse_simulation_pack_version: 1,
-    generated_at: new Date().toISOString(),
+    handoff_source: 'client_fallback',
     session_id: pack.session_id,
     setup_intake: pack.setup_intake,
     sample_output: pack.sample_output,
@@ -521,20 +553,7 @@ function downloadSimulationPack(pack: {
     hitl_gates: pack.hitl_gates,
     wds_summary: pack.wds_summary,
     open_questions: pack.open_questions,
-  };
-  const json = JSON.stringify(payload, null, 2);
-  try {
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    const slug = pack.sample_output?.output_name?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'workflow';
-    a.download = `boverse-simulation-pack-${slug}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  } catch { /* leave the rendered view in place — nothing else to do */ }
+  }, slug);
 }
 
 function SetupBlock({ setup, onChange }: { setup: SetupIntake; onChange: (s: SetupIntake) => void }) {

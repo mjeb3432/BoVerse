@@ -13,6 +13,7 @@ import {
   ensureSession,
   newWorkflowId,
   saveCanonical,
+  saveSetupIntake,
   setSessionStage,
   validateInvariants,
 } from '@/lib/canonical';
@@ -126,6 +127,8 @@ export async function POST(req: Request) {
   await saveCanonical(store);
   await persistArtifacts(sessionId, parsed);
   await seedRag(sessionId, parsed);
+  // Persist the Setup answers onto the session so they ride the handoff bundle.
+  if (setupIntake) await saveSetupIntake(sessionId, setupIntake);
   await setSessionStage(sessionId, 'extract');
 
   const lowConfidence = [

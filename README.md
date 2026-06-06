@@ -25,7 +25,7 @@ The formal framework lives in `docs/workflow-creator/` (the implementation-agnos
 | Path | What it is |
 |------|------------|
 | `landing/` | The app: marketing site + `/factory` two-swarm workflow factory (Next.js 16, React 19, Tailwind 4, TypeScript). |
-| `landing/migrations/` | Postgres schema (0001–0006: sessions + RAG + the canonical store + build artifacts). Apply with `node scripts/migrate.mjs`. |
+| `landing/migrations/` | Postgres schema (0001–0007: sessions + RAG + the canonical store + build artifacts + Setup intake). Apply with `node scripts/migrate.mjs`. |
 | `docs/workflow-creator/` | The Workflow Creator framework corpus (00–11), business-user drafts, and implementation notes. |
 | `BoVerse-Demo-2/` | Flint & Tinder sample **evidence** pack (creative-agency brief → priced proposal) — 5 realistic files and a runbook. The *simulation pack* itself is generated per session by BoVerse from this evidence + your Setup answers, not stored here. |
 
@@ -52,7 +52,7 @@ The app degrades gracefully without keys (no LLM → discovery is disabled with 
 - `GOOGLE_GENERATIVE_AI_API_KEY` — multimodal (PDFs / images) + embeddings
 - `DATABASE_URL` — Supabase Postgres + pgvector (Transaction pooler, port 6543)
 
-Then `node scripts/migrate.mjs` applies migrations 0001–0006.
+Then `node scripts/migrate.mjs` applies migrations 0001–0007.
 
 ## Deploy (Vercel + Supabase)
 

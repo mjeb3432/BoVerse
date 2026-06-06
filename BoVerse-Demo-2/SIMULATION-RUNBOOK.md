@@ -122,22 +122,33 @@ a spec they trust.
 
 ## Step 6 — Download the simulation pack
 
-Click **Download simulation pack** on the review surface. This saves a
-JSON file containing:
+Click **Download simulation pack** on the review surface. This pulls the
+authoritative handoff contract from the server
+(`GET /api/factory/swarm1/handoff?session_id=…`) — the same bytes the
+downstream Build swarm would fetch — and saves a JSON file containing:
 
+- `handoff_contract_version` — pin the downstream consumer to this
 - `setup_intake` — the Setup answers from Step 1 (your structured
-  integration points)
-- `sample_output` — the generated draft + computed fields + required
-  sections
-- `sample_inputs` — the back-solved per-run inputs
-- `hitl_gates` — every sign-off gate, with role + trigger
-- `wds_summary` — archetype, complexity, build readiness, components
-  the build swarm should and should not produce
-- `open_questions` — any Discovery questions still outstanding
+  integration points; `sourceMode` / `destinationMode` are the
+  switchable values)
+- `wds` — the full Workflow Design Specification (the deterministic
+  blueprint: outputs, inputs, rules, steps, sign-off gates, and the
+  build recommendation — what to build and what to refuse)
+- `simulation` — the sample output + back-solved sample inputs +
+  step trace
+- `approval` — the approval record; `approved` is `false` until you
+  approve in Step 7, so a pack downloaded now is for inspection
 
 This is the artifact that hands off to the downstream Build swarm. It
 is generated for THIS session against YOUR evidence — no two runs
-produce the same pack.
+produce the same pack. See [`docs/workflow-creator/HANDOFF.md`](../docs/workflow-creator/HANDOFF.md)
+for the full contract.
+
+> On a local dev session with no database, the button falls back to a
+> client-assembled pack (`handoff_source: "client_fallback"`) with the
+> same Setup answers + sample surfaces but a `wds_summary` instead of
+> the full `wds`. Configure `DATABASE_URL` to get the authoritative
+> server contract.
 
 ## Step 7 — Approve
 

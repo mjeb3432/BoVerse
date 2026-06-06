@@ -174,6 +174,35 @@ export async function setSessionStage(sessionId: string, stage: string): Promise
   await query('update workflow_sessions set current_stage = $1 where id = $2', [stage, sessionId]);
 }
 
+// ─── pre-upload Setup intake persistence ─────────────────────────────────────
+// The Setup answers anchor Discovery AND form the integration-points record
+// that travels with the handoff bundle. Persisted to the setup_intake JSONB
+// column (migration 0007). Memory map for local / no-DB sessions.
+const SETUP_INTAKE = new Map<string, unknown>();
+
+export async function saveSetupIntake(sessionId: string, setup: unknown): Promise<void> {
+  if (setup == null) return;
+  if (!HAS_DATABASE || sessionId.startsWith('local-')) {
+    SETUP_INTAKE.set(sessionId, setup);
+    return;
+  }
+  await query('update workflow_sessions set setup_intake = $1 where id = $2', [
+    JSON.stringify(setup),
+    sessionId,
+  ]);
+}
+
+export async function getSetupIntake(sessionId: string): Promise<unknown | null> {
+  if (!HAS_DATABASE || sessionId.startsWith('local-')) {
+    return SETUP_INTAKE.get(sessionId) ?? null;
+  }
+  const r = await query<{ setup_intake: unknown }>(
+    'select setup_intake from workflow_sessions where id = $1',
+    [sessionId],
+  );
+  return r?.rows[0]?.setup_intake ?? null;
+}
+
 // ─── derived-projection persistence (WDS + Simulation Pack) ──────────────────
 // Reuses the now-free generate_output / simulate_output JSONB columns on
 // workflow_sessions (no migration). Memory map for local / no-DB.
