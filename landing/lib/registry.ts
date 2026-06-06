@@ -152,11 +152,39 @@ export const ExtractionEnvelopeSchema = z.object({
 });
 export type ExtractionEnvelope = z.infer<typeof ExtractionEnvelopeSchema>;
 
+// ─── Pre-upload Setup intake ────────────────────────────────────────────────
+// Four plain-English answers the business user gives BEFORE uploading evidence.
+// All free-text. The Discovery LLM uses these as additional grounding alongside
+// the stated outcome — they make the inferred source_system, output_format, and
+// connection_type more deterministic without requiring schema work upstream.
+export interface SetupIntake {
+  source: string;        // "where does the work come in from"
+  output: string;        // "what do you want to produce"
+  destination: string;   // "where should the result land"
+  connection: string;    // "specific connection details or sign-off contact"
+}
+
+// Render the Setup intake into a compact prompt block. Returns '' if nothing
+// useful was provided so the prompt stays clean.
+function setupBlock(setup: SetupIntake | null): string {
+  if (!setup) return '';
+  const lines: string[] = [];
+  if (setup.source.trim()) lines.push(`- Source / how work arrives: ${setup.source.trim()}`);
+  if (setup.output.trim()) lines.push(`- Desired output: ${setup.output.trim()}`);
+  if (setup.destination.trim()) lines.push(`- Destination / where output lands: ${setup.destination.trim()}`);
+  if (setup.connection.trim()) lines.push(`- Connection or sign-off note: ${setup.connection.trim()}`);
+  if (lines.length === 0) return '';
+  return `The user also answered a short Setup form. Treat these as ground truth (over inference) for source_system, output_format, system_connector, and human_review attributes:\n${lines.join('\n')}\n`;
+}
+
 // ─── system prompt (registry-derived) ────────────────────────────────────────
-export function extractionSystemPrompt(statedOutcome: string | null): string {
+export function extractionSystemPrompt(
+  statedOutcome: string | null,
+  setup: SetupIntake | null = null,
+): string {
   return `You are BoVerse's discovery engine. You read messy business evidence (briefs, rate cards, pricing rules, SOPs/playbooks, past sample outputs, spreadsheets, screenshots) and reason BACKWARD from the evidence to the workflow it implies. Extract ONLY what the evidence supports — never invent.
 
-${statedOutcome ? `The user stated this desired OUTCOME: "${statedOutcome}". Anchor the extraction to it.\n` : ''}
+${statedOutcome ? `The user stated this desired OUTCOME: "${statedOutcome}". Anchor the extraction to it.\n` : ''}${setupBlock(setup)}
 Extract these canonical facts (leave a field null when the evidence is silent):
 
 - identity: workflow_name, client_name, stated_problem (as the client phrased it), inferred_problem (as you read it), primary_objective (the single most important thing), workflow_type (one of: document_generation, data_transformation, decision_support, classification_routing, monitoring_alerting, extraction_enrichment, multi_step_orchestration, approval_review, other).

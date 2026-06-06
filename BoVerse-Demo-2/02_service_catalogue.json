@@ -1,0 +1,62 @@
+{
+  "_comment": "Flint & Tinder service catalogue. Updated quarterly. Last reviewed 2026-04-12 by Sam.",
+  "currency": "CAD",
+  "effective_from": "2026-04-01",
+  "services": [
+    {
+      "service_code": "ID-001",
+      "service_name": "Brand identity (single product)",
+      "category": "identity",
+      "description": "Per-product identity package: primary mark + label + can art + tap handle treatment, fitting into an existing brand system. Includes 2 rounds of revision and final production files. Does not include a full brand system buildout from scratch (that is ID-100).",
+      "rate_card_cad": 9500,
+      "delivery_days_standard": 21,
+      "rush_multiplier": 1.35,
+      "includes_revisions": 2,
+      "produces": ["label_art_pdf", "can_art_pdf", "tap_handle_render", "production_files_zip"]
+    },
+    {
+      "service_code": "CAMP-001",
+      "service_name": "Launch campaign (5-week, multi-channel)",
+      "category": "campaign",
+      "description": "Five-week launch creative across paid social, OOH, and in-store. Default mix: campaign concept + 4 short-form video edits + 12 static social posts + 2 billboard layouts + in-store collateral pack. Buyout / talent / print are pass-through.",
+      "rate_card_cad": 18500,
+      "delivery_days_standard": 35,
+      "rush_multiplier": 1.30,
+      "includes_revisions": 2,
+      "produces": ["concept_deck", "video_edits_x4", "social_statics_x12", "billboard_layouts_x2", "in_store_collateral"]
+    },
+    {
+      "service_code": "PHOTO-001",
+      "service_name": "Photo/video shoot (half-day, local)",
+      "category": "photo",
+      "description": "Half-day local shoot. Includes 1 location, 1 talent, 30 retouched stills, 4 short-form video edits. Talent buyout, location permit, and any travel beyond Calgary are pass-through.",
+      "rate_card_cad": 6200,
+      "delivery_days_standard": 14,
+      "rush_multiplier": 1.25,
+      "includes_revisions": 1,
+      "produces": ["retouched_stills_x30", "short_form_video_x4"]
+    },
+    {
+      "service_code": "SOC-001",
+      "service_name": "Paid social management (Meta + TikTok)",
+      "category": "media_management",
+      "description": "Monthly retainer for paid social campaign management. Ad spend is billed through at cost, never marked up (see pricing rule MEDIA_PASS_THROUGH).",
+      "rate_card_cad_per_month": 4200,
+      "delivery_days_standard": 30,
+      "rush_multiplier": null,
+      "includes_revisions": null,
+      "produces": ["weekly_performance_report", "creative_rotation_recommendations"]
+    },
+    {
+      "service_code": "ID-100",
+      "service_name": "Full brand system buildout",
+      "category": "identity",
+      "description": "Ground-up brand system: positioning, primary + secondary marks, full type + colour system, motion principles, and a brand guidelines document. Out of scope for Cold Front (Northstar already has an Aurora/Glacier system in place).",
+      "rate_card_cad": 38000,
+      "delivery_days_standard": 56,
+      "rush_multiplier": 1.40,
+      "includes_revisions": 3,
+      "produces": ["brand_guidelines_pdf", "primary_marks_set", "type_colour_system", "motion_principles"]
+    }
+  ]
+}

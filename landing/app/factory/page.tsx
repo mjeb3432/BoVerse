@@ -29,6 +29,21 @@ interface SampleInput { input_name: string; input_type: string; format: string; 
 interface SampleOutput { output_name: string; output_type: string; output_format: string; required_sections: string[]; rendered_sample: string; computed_fields: Record<string, unknown> }
 interface WdsSummary { primary_archetype: string; complexity: string; overall_confidence: number; required_components: string[]; unnecessary_components: string[] }
 
+// Pre-upload Setup — four plain-English questions that anchor Discovery before
+// it reads the evidence. Each field is optional; the more the user fills in,
+// the more deterministic the downstream sample becomes. These also become the
+// integration-points record the downstream Build swarm consumes at handoff.
+interface SetupIntake {
+  source: string;        // "where does the work come in from"
+  output: string;        // "what do you want to produce"
+  destination: string;   // "where should the result land"
+  connection: string;    // "any specific connection details or sign-off contact"
+}
+const EMPTY_SETUP: SetupIntake = { source: '', output: '', destination: '', connection: '' };
+function setupIsEmpty(s: SetupIntake): boolean {
+  return !s.source.trim() && !s.output.trim() && !s.destination.trim() && !s.connection.trim();
+}
+
 // Severity → editorial accent (style only). vermilion-ink = critical/high, ink = medium, faint = low.
 const SEV_COLOR: Record<string, string> = {
   critical: '#c0341f',
@@ -40,6 +55,7 @@ const SEV_COLOR: Record<string, string> = {
 export default function FactoryPage() {
   const [phase, setPhase] = useState<Phase>('intake');
   const [outcome, setOutcome] = useState('');
+  const [setup, setSetup] = useState<SetupIntake>(EMPTY_SETUP);
   const [files, setFiles] = useState<File[]>([]);
   const [dragging, setDragging] = useState(false);
   const [status, setStatus] = useState('');
@@ -91,6 +107,7 @@ export default function FactoryPage() {
     try {
       const fd = new FormData();
       fd.append('outcome', outcome);
+      if (!setupIsEmpty(setup)) fd.append('setup_intake', JSON.stringify(setup));
       for (const f of files) fd.append('files', f);
       setStatus('Reading your evidence…');
       const { data: ext } = await jsonFetch('/api/factory/swarm1/extract', { method: 'POST', body: fd });
@@ -230,6 +247,11 @@ export default function FactoryPage() {
           {/* ── INTAKE ── */}
           {phase === 'intake' && (
             <div className="space-y-6">
+              {/* Pre-upload Setup — four plain-English questions. All optional;
+                 they anchor Discovery and become the integration-points record
+                 the downstream Build swarm picks up at handoff. */}
+              <SetupBlock setup={setup} onChange={setSetup} />
+
               <div>
                 <label htmlFor="outcome" className="sw-kicker mb-3">Outcome / what do you want?</label>
                 <textarea id="outcome" value={outcome} onChange={(e) => setOutcome(e.target.value)} rows={3}
@@ -379,24 +401,92 @@ export default function FactoryPage() {
         </div>
       </div>
 
-      {/* Editorial field treatment: paper bg, hairline rule, crisp vermilion focus ring. */}
-      <style jsx>{`
-        .sw-field {
-          background: var(--paper);
-          border: 1px solid var(--rule-2);
-          border-radius: 2px;
-          color: var(--ink);
-          outline: none;
-          transition: border-color 0.2s var(--sw-ease), box-shadow 0.2s var(--sw-ease);
-        }
-        .sw-field::placeholder { color: var(--ink-faint); }
-        .sw-field:focus,
-        .sw-field:focus-visible {
-          border-color: var(--signal);
-          box-shadow: 0 0 0 1px var(--signal);
-        }
-      `}</style>
     </main>
+  );
+}
+
+// Pre-upload Setup — collapsed by default so it doesn't crowd the intake. When
+// the user expands and fills in any field, it surfaces a small "filled" hint
+// next to the summary so they know the answers are being carried into Discover.
+function SetupBlock({ setup, onChange }: { setup: SetupIntake; onChange: (s: SetupIntake) => void }) {
+  const filledCount = (Object.values(setup) as string[]).filter((v) => v.trim().length > 0).length;
+  return (
+    <details className="sw-card" open={filledCount > 0}>
+      <summary className="cursor-pointer px-4 py-3.5 flex items-center justify-between">
+        <span className="sw-kicker" style={{ margin: 0 }}>
+          <span className="sw-spark" aria-hidden="true" />
+          Setup / a few quick details (optional)
+        </span>
+        <span className="sw-mono text-[10px] tracking-widest sw-muted-2">
+          {filledCount > 0 ? `${filledCount} of 4 filled` : 'tap to expand'}
+        </span>
+      </summary>
+      <div className="px-4 pb-5 pt-1 space-y-5">
+        <p className="sw-muted text-xs leading-relaxed" style={{ maxWidth: '60ch' }}>
+          Where does the work come from, what should we produce, and how does it connect to the
+          rest of your stack? You can skip anything you&apos;re not sure about — your answers
+          make the sample we show you more accurate, and they travel with the bundle when it
+          hands off to the build team.
+        </p>
+
+        <SetupField
+          id="setup-source"
+          label="Where does your work come in from?"
+          hint="The system or way the trigger arrives — email, spreadsheet, a CRM, a form."
+          placeholder="e.g. Customers email us a brief. Or: weekly Excel export from Salesforce. Or: a HubSpot deal moves to ‘Proposal’."
+          value={setup.source}
+          onChange={(v) => onChange({ ...setup, source: v })}
+        />
+
+        <SetupField
+          id="setup-output"
+          label="What do you want to produce?"
+          hint="The thing this workflow ends with — a document, a record in another app, a message."
+          placeholder="e.g. A priced quote PDF we email back. Or: an invoice posted into QuickBooks. Or: a Slack summary to the team."
+          value={setup.output}
+          onChange={(v) => onChange({ ...setup, output: v })}
+        />
+
+        <SetupField
+          id="setup-destination"
+          label="Where should the result land?"
+          hint="Where the output goes once it&apos;s approved — a person, a system, a folder."
+          placeholder="e.g. Back to the customer over email. Or: into our CRM as an opportunity. Or: dropped into a shared SharePoint folder."
+          value={setup.destination}
+          onChange={(v) => onChange({ ...setup, destination: v })}
+        />
+
+        <SetupField
+          id="setup-connection"
+          label="Any specific connection details or sign-off contact?"
+          hint="If there&apos;s an API, named tenant, or person who reviews — note it here. Otherwise skip."
+          placeholder="e.g. Salesforce production tenant. Or: ap@finance.com reviews everything over $10K. Or: no API yet, we&apos;ll hand off manually for now."
+          value={setup.connection}
+          onChange={(v) => onChange({ ...setup, connection: v })}
+        />
+      </div>
+    </details>
+  );
+}
+
+function SetupField({
+  id, label, hint, placeholder, value, onChange,
+}: {
+  id: string; label: string; hint: string; placeholder: string; value: string; onChange: (v: string) => void;
+}) {
+  return (
+    <div>
+      <label htmlFor={id} className="block text-sm mb-1" style={{ color: 'var(--ink)' }}>{label}</label>
+      <p className="sw-muted text-[11px] mb-2" style={{ maxWidth: '60ch' }}>{hint}</p>
+      <textarea
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        rows={2}
+        placeholder={placeholder}
+        className="sw-field w-full text-sm p-3"
+      />
+    </div>
   );
 }
 

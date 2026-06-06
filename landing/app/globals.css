@@ -255,6 +255,11 @@ body.sw {
 .sw-step:hover::before { transform: scaleX(1); }
 .sw-card { position: relative; border-radius: 3px; background: var(--paper); border: 1px solid var(--rule-2); transition: background .25s var(--sw-ease); }
 .sw-card:hover { background: var(--paper-2); }
+
+/* ---- editorial form field: paper ground, hairline rule, vermilion focus ---- */
+.sw-field { background: var(--paper); border: 1px solid var(--rule-2); border-radius: 2px; color: var(--ink); outline: none; transition: border-color .2s var(--sw-ease), box-shadow .2s var(--sw-ease); }
+.sw-field::placeholder { color: var(--ink-faint); }
+.sw-field:focus, .sw-field:focus-visible { border-color: var(--signal); box-shadow: 0 0 0 1px var(--signal); }
 .sw-orb { display: none; }   /* blurred glow orbs were a tell — removed */
 .sw-badge { display: inline-flex; align-items: center; gap: 9px; font-family: var(--font-geist-mono), monospace; font-weight: 500; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; padding: 6px 11px; border-radius: 2px; border: 1px solid var(--rule-2); background: var(--paper); color: var(--ink-dim); }
 .sw-mini { width: 7px; height: 7px; border-radius: 0; transform: rotate(45deg); }
