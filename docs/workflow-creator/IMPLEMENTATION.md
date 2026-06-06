@@ -15,6 +15,8 @@
 | `POST`/`PATCH /api/factory/swarm1/gaps` | 1 | missing-info ledger → blocking questions; apply answers |
 | `POST /api/factory/swarm1/specify` | 1 | WDS + Simulation Pack (sample output + sample inputs) |
 | `POST /api/factory/swarm1/review` | 1 | comment / input_change (re-project) / **approve** (the seam gate) |
+| `GET /api/factory/swarm1/blueprint` | 1 | Configuration 0 — the six named Discovery outputs (blueprint, classification, registry, canonical schema, rules wiki, simulation pack) |
+| `GET /api/factory/swarm1/handoff` | 1 | export boundary — the Swarm2Input contract + setup_intake + discovery_package |
 | `POST /api/factory/swarm2/build` | 2 | approved spec → assemble bundle (only required objects) → verify → persist |
 | `GET /api/factory/swarm2/[buildId]` | 2 | bundle manifest + files; `?download=zip\|md\|json` |
 
