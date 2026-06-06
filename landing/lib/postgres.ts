@@ -28,7 +28,6 @@ export function getPool(): Pool | null {
   });
   pool.on('error', (err) => {
     // Background pool errors must not crash the server.
-    // eslint-disable-next-line no-console
     console.error('[pg pool error]', err);
   });
   return pool;
