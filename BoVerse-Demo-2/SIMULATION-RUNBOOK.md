@@ -25,14 +25,17 @@ If any of these are missing the app will tell you on `/factory`.
 
 ## Step 1 — Open `/factory` and answer the Setup form
 
-The page now opens with a Setup section above the outcome textarea —
-four plain-English questions. For Cold Front, fill them in like this:
+The page opens with a Setup section above the outcome textarea —
+seven optional questions. For Cold Front, fill them in like this:
 
 | Field | Suggested answer |
 |---|---|
 | Where does your work come in from? | "Inbound creative briefs over email — usually from the client's marketing lead. Sometimes attachments (decks, reference images)." |
+| How does it arrive? | **Forwarded emails / mailbox** |
+| What types of files will you upload? | ".eml emails, .xlsx rate cards, .pdf reference decks, occasional screenshots." |
 | What do you want to produce? | "A draft priced proposal (one document, one total) that the client can sign without us going back and forth on options." |
 | Where should the result land? | "Back to the client over email as a PDF attachment, plus a copy filed into our CRM under the client account." |
+| How should the result leave? | **Files I upload by hand** *(or **Live API / system integration** once the CRM connector is in)* |
 | Any specific connection details or sign-off contact? | "Creative Director (Sam) reviews everything before send for jobs $25K–$60K; Managing Partner (Mara) for anything over $60K." |
 
 These answers anchor Discovery before it reads the evidence — they make

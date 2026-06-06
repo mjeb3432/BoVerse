@@ -9,6 +9,12 @@ before swapping in real data** — you don't need to run the system to
 know what it would output. If the actual run diverges from this, the
 runbook tells you which gate to look at.
 
+**Two views of the same proposal:** this markdown is the human-facing
+form; [`EXPECTED-OUTPUT.json`](EXPECTED-OUTPUT.json) is the structured
+contract the downstream Build swarm consumes (line items, computed
+sub-totals, rule provenance, sign-off gates). They are kept in sync —
+edit one, update the other.
+
 The total is **$39,401.25**, achieved by honoring three rules from
 `03_pricing_rules.json` and `04_internal_playbook.md`:
 

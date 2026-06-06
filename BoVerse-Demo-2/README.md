@@ -20,7 +20,8 @@ start when introducing the system.
 | `03_pricing_rules.json` | Deterministic pricing rules (multiplier-before-discount, repeat-client thresholds, media pass-through) |
 | `04_internal_playbook.md` | The judgment layer — the agency's SOP |
 | `05_past_winning_proposal.txt` | A prior accepted proposal (Aurora launch) — the format and bar |
-| `EXPECTED-OUTPUT.md` | What BoVerse should produce when fed the five files above ($39,401.25) |
+| `EXPECTED-OUTPUT.md` | What BoVerse should produce — human-readable form ($39,401.25) |
+| `EXPECTED-OUTPUT.json` | The same proposal as a structured contract for the downstream Build swarm |
 | `SIMULATION-RUNBOOK.md` | Step-by-step for running the demo and what to look for at each gate |
 
 ## Why this pack matters
