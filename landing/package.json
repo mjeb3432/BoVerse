@@ -7,7 +7,9 @@
     "dev:plain": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "npx tsx scripts/test-classify.ts && npx tsx scripts/test-assemble.ts",
+    "test:classify": "npx tsx scripts/test-classify.ts"
   },
   "dependencies": {
     "@ai-sdk/cerebras": "^2.0.51",

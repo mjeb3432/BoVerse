@@ -8,6 +8,7 @@
 import type { CanonicalStore, MissingInformation } from './canonical-schema';
 import { newFactId, makeProvenance } from './canonical';
 import { detectTechStacks } from './tech-stacks';
+import { isClassificationBorderline, archetypeLabel } from './rules-engine';
 
 type BuildReadiness = 'blocking' | 'ready' | 'ready_with_assumptions';
 
@@ -107,6 +108,26 @@ export function detectTechStackGaps(store: CanonicalStore, extraSignals: string[
   return out;
 }
 
+/**
+ * When the archetype was inferred with low confidence or the signals sat on a
+ * boundary between two shapes, emit ONE non-blocking confirmation question.
+ * Skipping it doesn't block the build (the inferred archetype stands); it just
+ * makes the ambiguity visible and records the user's read for the operator.
+ */
+export function detectClassificationGap(store: CanonicalStore): MissingInformation[] {
+  if (!store.archetype || !isClassificationBorderline(store)) return [];
+  const label = archetypeLabel(store.archetype.primary_archetype);
+  return [gap({
+    missing_attribute: 'archetype_classification',
+    why_it_matters: 'The inferred workflow shape determines which objects get built; confirming it avoids building the wrong ones.',
+    severity: 'medium',
+    blocking_status: 'non_blocking',
+    gap_kind: 'low_confidence',
+    suggested_question: `We read this as a ${label}. Does that match how you think of this workflow? If not, tell us what it really is.`,
+    confidence_score: store.archetype.confidence_score ?? null,
+  })];
+}
+
 /** Build the full gap ledger. Preserves broken_link gaps already on the store. */
 export function analyzeGaps(store: CanonicalStore, extraSignals: string[] = []): MissingInformation[] {
   const gaps: MissingInformation[] = [];
@@ -145,6 +166,9 @@ export function analyzeGaps(store: CanonicalStore, extraSignals: string[] = []):
 
   // ── tech-stack probing (discover-phase "what does this connect to") ──
   gaps.push(...detectTechStackGaps(store, extraSignals));
+
+  // ── classification confirm (surface when the inferred shape is uncertain) ──
+  gaps.push(...detectClassificationGap(store));
   return gaps;
 }
 
@@ -167,7 +191,13 @@ export function prioritize(gaps: MissingInformation[]): MissingInformation[] {
   // discover phase (capped) — they're the "what does this connect to"
   // questions. Any beyond the cap fall through to 'assumed' below.
   const techStack = gaps.filter((g) => g.gap_kind === 'tech_stack').slice(0, TECH_STACK_QUESTION_CAP);
-  const questions = [...blocking, ...techStack];
+  // The single archetype-confirmation question (non-blocking) is surfaced too —
+  // it's the "did we read the shape right" check, distinct from other
+  // low_confidence gaps which stay as silent assumptions.
+  const classification = gaps
+    .filter((g) => g.gap_kind === 'low_confidence' && g.missing_attribute === 'archetype_classification')
+    .slice(0, 1);
+  const questions = [...blocking, ...classification, ...techStack];
   const qset = new Set(questions);
   for (const g of gaps) {
     if (qset.has(g)) {
