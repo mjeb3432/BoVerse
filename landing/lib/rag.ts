@@ -8,7 +8,7 @@
 // without RAG, just less precise.
 
 import { embed } from 'ai';
-import { embeddingModel } from './llm';
+import { embeddingModel, EMBEDDING_DIMENSIONS } from './llm';
 import { query } from './postgres';
 
 // asset_type is free-form text (per 0003 migration). The LLM picks names
@@ -41,7 +41,13 @@ export async function embedText(text: string): Promise<number[] | null> {
   const model = embeddingModel();
   if (!model) return null;
   try {
-    const { embedding } = await embed({ model, value: text });
+    // gemini-embedding-001 defaults to 3072 dims; request 768 to match the
+    // pgvector column. (Ignored harmlessly by models without the option.)
+    const { embedding } = await embed({
+      model,
+      value: text,
+      providerOptions: { google: { outputDimensionality: EMBEDDING_DIMENSIONS } },
+    });
     return embedding;
   } catch (err) {
     // Embedding failures must not block ingestion. Log and continue with null
